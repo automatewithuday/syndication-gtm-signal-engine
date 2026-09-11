@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "account": {
+    "name": "ColdIQ",
+    "domain": "coldiq.com"
+  },
+  "facts": [
+    {
+      "fact_type": "b2b_business_model",
+      "value": true,
+      "strength": "confirmed",
+      "confidence": 0.96,
+      "url": "https://wf.coldiq.com/",
+      "excerpt": "For B2B tech companies above $100K per month in revenue.",
+      "observed_at": "2026-09-10T14:56:54+00:00",
+      "method": "public_web_research"
+    },
+    {
+      "fact_type": "professional_buyers",
+      "value": ["marketing_and_growth"],
+      "strength": "likely",
+      "confidence": 0.91,
+      "url": "https://coldiq.com/case-studies/airops-abm",
+      "excerpt": "A Tier 1 audience: marketing executives, growth leaders, and CMOs at top SaaS brands.",
+      "observed_at": "2026-09-10T14:56:54+00:00",
+      "method": "deterministic_normalization_with_human_review"
+    },
+    {
+      "fact_type": "professional_buyers",
+      "value": ["sales", "revenue_operations"],
+      "strength": "likely",
+      "confidence": 0.93,
+      "url": "https://coldiq.com/case-studies/aircall",
+      "excerpt": "VP of Global Sales at Aircall wanted to scale regional growth across EMEA and APAC.",
+      "observed_at": "2026-09-10T14:56:54+00:00",
+      "method": "deterministic_normalization_with_human_review"
+    },
+    {
+      "fact_type": "sales_motion",
+      "value": "consultative",
+      "strength": "likely",
+      "confidence": 0.90,
+      "url": "https://coldiq.com/case-studies/teikametrics",
+      "excerpt": "Schedule a 30-minute call with ColdIQ leadership to discuss outbound strategy.",
+      "observed_at": "2026-09-10T14:56:54+00:00",
+      "method": "deterministic_normalization_with_human_review"
+    },
+    {
+      "fact_type": "operating_scale",
+      "value": "established",
+      "strength": "likely",
+      "confidence": 0.82,
+      "url": "https://coldiq.com/blog/b2b-sales-funnel",
+      "excerpt": "We bootstrapped ColdIQ to $4.5M ARR.",
+      "observed_at": "2026-09-10T14:56:54+00:00",
+      "method": "deterministic_normalization_with_human_review"
+    }
+  ],
+  "risks": [
+    "Revenue and customer-scale statements are first-party marketing claims.",
+    "ColdIQ presents both a GTM data API and agency/services motion; consultative fit may vary by offer."
+  ]
+}

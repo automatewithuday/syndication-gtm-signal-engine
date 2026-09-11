@@ -1,0 +1,11 @@
+{
+  "account": {
+    "name": "DailyPay",
+    "domain": "dailypay.com"
+  },
+  "channel": "content_syndication",
+  "observations": [],
+  "risks": [
+    "No positive channel-gap evidence has yet been verified in a saved Scrapling page."
+  ]
+}

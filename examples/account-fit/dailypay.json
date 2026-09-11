@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "account": {
+    "name": "DailyPay",
+    "domain": "dailypay.com"
+  },
+  "facts": [
+    {
+      "fact_type": "b2b_business_model",
+      "value": true,
+      "strength": "confirmed",
+      "confidence": 0.98,
+      "url": "https://www.dailypay.com/demo/",
+      "excerpt": "I am an employer. I want to book a demo and speak to a specialist.",
+      "observed_at": "2026-09-10T14:56:54+00:00",
+      "method": "public_web_research"
+    },
+    {
+      "fact_type": "professional_buyers",
+      "value": ["human_resources", "payroll"],
+      "strength": "confirmed",
+      "confidence": 0.95,
+      "url": "https://www.dailypay.com/resource-center/blog/what-is-on-demand-pay-a-business-guide-for-hr-and-payroll-teams/",
+      "excerpt": "A business guide for HR and payroll teams.",
+      "observed_at": "2026-09-10T14:56:54+00:00",
+      "method": "public_web_research"
+    },
+    {
+      "fact_type": "sales_motion",
+      "value": "enterprise",
+      "strength": "likely",
+      "confidence": 0.92,
+      "url": "https://www.dailypay.com/integrations/",
+      "excerpt": "A Personalized Demo to Fit Your Company’s Needs.",
+      "observed_at": "2026-09-10T14:56:54+00:00",
+      "method": "deterministic_normalization_with_human_review"
+    },
+    {
+      "fact_type": "operating_scale",
+      "value": "enterprise",
+      "strength": "likely",
+      "confidence": 0.96,
+      "url": "https://www.dailypay.com/about-us/",
+      "excerpt": "1000+ clients served; 5M+ employees have access to DailyPay.",
+      "observed_at": "2026-09-10T14:56:54+00:00",
+      "method": "deterministic_normalization_with_human_review"
+    }
+  ],
+  "risks": [
+    "Scale figures are first-party claims and do not substitute for independently verified revenue or employee count.",
+    "Enterprise sales motion is inferred from personalized demos, integrations, security language, and large-employer proof.",
+    "DailyPay also advertises a small-business self-serve offer, so the account has a hybrid sales motion."
+  ]
+}

@@ -1,0 +1,316 @@
+{
+  "version": "content_syndication_v1",
+  "calibration": {
+    "status": "provisional_unlabeled",
+    "note": "Initial thresholds are behavior checks against two real-company samples, not outcome-calibrated qualification thresholds."
+  },
+  "component_weights": {
+    "fit": 0.30,
+    "readiness": 0.25,
+    "gap": 0.25,
+    "trigger": 0.20
+  },
+  "fit_factors": [
+    {
+      "id": "b2b_business_model",
+      "fact_type": "b2b_business_model",
+      "kind": "boolean",
+      "maximum_points": 30
+    },
+    {
+      "id": "professional_buyer_coverage",
+      "fact_type": "professional_buyers",
+      "kind": "counted_list",
+      "maximum_points": 25,
+      "tiers": [
+        {
+          "minimum": 1,
+          "points": 10
+        },
+        {
+          "minimum": 2,
+          "points": 18
+        },
+        {
+          "minimum": 3,
+          "points": 25
+        }
+      ]
+    },
+    {
+      "id": "sales_motion",
+      "fact_type": "sales_motion",
+      "kind": "categorical",
+      "maximum_points": 25,
+      "points": {
+        "self_serve": 8,
+        "transactional": 12,
+        "consultative": 20,
+        "enterprise": 25
+      }
+    },
+    {
+      "id": "operating_scale",
+      "fact_type": "operating_scale",
+      "kind": "categorical",
+      "maximum_points": 20,
+      "points": {
+        "emerging": 7,
+        "established": 15,
+        "enterprise": 20
+      }
+    }
+  ],
+  "fit_interpretation": {
+    "strength_credit": {
+      "confirmed": 1.0,
+      "likely": 0.85,
+      "possible": 0.50,
+      "unknown": 0.0,
+      "contradicted": 0.0
+    },
+    "minimum_fit": 60,
+    "minimum_confidence": 0.70,
+    "minimum_evidence_items": 4
+  },
+  "gap_factors": [
+    {
+      "id": "explicit_expansion_intent",
+      "signal_type": "explicit_expansion_intent",
+      "maximum_points": 35
+    },
+    {
+      "id": "documented_distribution_bottleneck",
+      "signal_type": "documented_distribution_bottleneck",
+      "maximum_points": 30
+    },
+    {
+      "id": "active_partner_or_hiring_search",
+      "signal_type": "active_partner_or_hiring_search",
+      "maximum_points": 20
+    },
+    {
+      "id": "documented_performance_shortfall",
+      "signal_type": "documented_performance_shortfall",
+      "maximum_points": 15
+    }
+  ],
+  "gap_interpretation": {
+    "strength_credit": {
+      "confirmed": 1.0,
+      "likely": 0.85,
+      "possible": 0.5,
+      "unknown": 0.0,
+      "contradicted": 0.0
+    },
+    "contradiction_signal_types": [
+      "documented_healthy_syndication_program",
+      "documented_syndication_success"
+    ],
+    "minimum_gap": 45,
+    "minimum_confidence": 0.7,
+    "minimum_supporting_evidence": 2
+  },
+  "readiness_factors": [
+    {
+      "id": "substantial_asset_inventory",
+      "maximum_points": 25,
+      "metric": "substantial_asset_count",
+      "tiers": [
+        {
+          "minimum": 1,
+          "points": 8
+        },
+        {
+          "minimum": 3,
+          "points": 14
+        },
+        {
+          "minimum": 10,
+          "points": 20
+        },
+        {
+          "minimum": 25,
+          "points": 25
+        }
+      ]
+    },
+    {
+      "id": "asset_type_diversity",
+      "maximum_points": 10,
+      "metric": "substantial_asset_type_count",
+      "tiers": [
+        {
+          "minimum": 1,
+          "points": 4
+        },
+        {
+          "minimum": 2,
+          "points": 7
+        },
+        {
+          "minimum": 3,
+          "points": 10
+        }
+      ]
+    },
+    {
+      "id": "customer_proof",
+      "maximum_points": 15,
+      "metric": "substantial_case_study_count",
+      "tiers": [
+        {
+          "minimum": 1,
+          "points": 5
+        },
+        {
+          "minimum": 3,
+          "points": 9
+        },
+        {
+          "minimum": 8,
+          "points": 12
+        },
+        {
+          "minimum": 15,
+          "points": 15
+        }
+      ]
+    },
+    {
+      "id": "assets_within_90_days",
+      "maximum_points": 15,
+      "metric": "assets_within_90_days",
+      "tiers": [
+        {
+          "minimum": 1,
+          "points": 5
+        },
+        {
+          "minimum": 3,
+          "points": 9
+        },
+        {
+          "minimum": 6,
+          "points": 12
+        },
+        {
+          "minimum": 10,
+          "points": 15
+        }
+      ]
+    },
+    {
+      "id": "assets_within_365_days",
+      "maximum_points": 10,
+      "metric": "assets_within_365_days",
+      "tiers": [
+        {
+          "minimum": 1,
+          "points": 3
+        },
+        {
+          "minimum": 5,
+          "points": 6
+        },
+        {
+          "minimum": 10,
+          "points": 8
+        },
+        {
+          "minimum": 20,
+          "points": 10
+        }
+      ]
+    },
+    {
+      "id": "effective_suitability_ratio",
+      "maximum_points": 15,
+      "metric": "effective_suitability_ratio",
+      "tiers": [
+        {
+          "minimum": 0.25,
+          "points": 4
+        },
+        {
+          "minimum": 0.50,
+          "points": 8
+        },
+        {
+          "minimum": 0.75,
+          "points": 12
+        },
+        {
+          "minimum": 0.90,
+          "points": 15
+        }
+      ]
+    },
+    {
+      "id": "lead_capture_assets",
+      "maximum_points": 10,
+      "metric": "lead_capture_asset_count",
+      "tiers": [
+        {
+          "minimum": 1,
+          "points": 4
+        },
+        {
+          "minimum": 3,
+          "points": 7
+        },
+        {
+          "minimum": 8,
+          "points": 10
+        }
+      ]
+    }
+  ],
+  "trigger": {
+    "maximum_points_from_content": 60,
+    "recent_asset_tiers": [
+      {
+        "minimum": 1,
+        "points": 15
+      },
+      {
+        "minimum": 3,
+        "points": 30
+      },
+      {
+        "minimum": 6,
+        "points": 45
+      },
+      {
+        "minimum": 10,
+        "points": 60
+      }
+    ]
+  },
+  "confidence": {
+    "weights": {
+      "raw_integrity": 0.20,
+      "date_coverage": 0.25,
+      "substance_coverage": 0.25,
+      "gating_coverage": 0.10,
+      "crawl_completeness": 0.20
+    },
+    "partial_crawl_value": 0.50,
+    "incomplete_crawl_cap": 0.75,
+    "missing_manifest_cap": 0.65
+  },
+  "qualification": {
+    "minimum_readiness": 65,
+    "minimum_confidence": 0.60,
+    "minimum_asset_evidence": 3
+  },
+  "interpretation": {
+    "possible_suitability_credit": 0.50,
+    "gated_values": [
+      "fully_gated",
+      "optional_gate",
+      "summary_ungated_full_asset_gated",
+      "registration_required"
+    ]
+  }
+}

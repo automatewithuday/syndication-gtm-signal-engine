@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "scoring_version": "content_syndication_v2",
+  "as_of": "2026-09-11",
+  "accounts": [
+    {
+      "name": "DailyPay",
+      "domain": "dailypay.com",
+      "run_id": "20260910T224631Z-52eaa2e5",
+      "components": {
+        "fit": {"score": 86.2, "confidence": 0.95},
+        "readiness": {"score": 85.0, "confidence": 0.75},
+        "gap": {"score": null, "confidence": 0.0},
+        "trigger": {"score": 59.5, "confidence": 0.98}
+      },
+      "weighted_total": null,
+      "overall_confidence": 0.75,
+      "opportunity_status": "insufficient_evidence",
+      "blockers": ["gap"]
+    },
+    {
+      "name": "ColdIQ",
+      "domain": "coldiq.com",
+      "run_id": "20260910T224633Z-e599a4a6",
+      "components": {
+        "fit": {"score": 84.8, "confidence": 0.915},
+        "readiness": {"score": 93.0, "confidence": 0.745},
+        "gap": {"score": null, "confidence": 0.0},
+        "trigger": {"score": 60.0, "confidence": 0.745}
+      },
+      "weighted_total": null,
+      "overall_confidence": 0.745,
+      "opportunity_status": "insufficient_evidence",
+      "blockers": ["gap"]
+    }
+  ],
+  "interpretation": "A null weighted total means required gap evidence is unknown; it is not a zero score or proof that the channel is unused."
+}

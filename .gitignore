@@ -1,0 +1,14 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+build/
+dist/
+*.egg-info/
+
+# Live crawl output may contain copyrighted page content or incidental PII.
+data/runs/
+data/*.sqlite3
+data/*.sqlite3-shm
+data/*.sqlite3-wal

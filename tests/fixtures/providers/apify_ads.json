@@ -1,0 +1,20 @@
+[
+  {
+    "platform": "linkedin",
+    "ad_archive_id": "li-123",
+    "ad_text": "Download the operations guide",
+    "landing_page_url": "https://example.com/guides/ops?utm_source=linkedin&utm_campaign=q3&li_fat_id=click-1",
+    "ad_library_url": "https://www.linkedin.com/ad-library/detail/li-123",
+    "start_date": "2026-09-01",
+    "confidence": 0.94
+  },
+  {
+    "platform": "meta",
+    "id": "meta-456",
+    "creative_text": "See the operations benchmark",
+    "destination_url": "https://example.com/reports/benchmark?utm_source=facebook&utm_medium=paid&fbclid=click-2",
+    "source_url": "https://www.facebook.com/ads/library/?id=meta-456",
+    "first_seen_at": "2026-09-02",
+    "confidence": 0.91
+  }
+]

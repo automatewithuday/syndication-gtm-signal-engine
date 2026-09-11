@@ -1,0 +1,18 @@
+{
+  "weights": {
+    "fit": 0.30,
+    "readiness": 0.25,
+    "gap": 0.25,
+    "trigger": 0.20
+  },
+  "qualification": {
+    "minimum_total": 65,
+    "minimum_confidence": 0.60,
+    "minimum_evidence_items": 3
+  },
+  "crawl": {
+    "maximum_pages": 500,
+    "include_paths": ["/resources", "/customers", "/case-studies", "/industries", "/solutions", "/demo", "/pricing"],
+    "exclude_paths": ["/legal", "/privacy", "/terms", "/careers"]
+  }
+}

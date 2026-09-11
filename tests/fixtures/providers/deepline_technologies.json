@@ -1,0 +1,12 @@
+{
+  "technologies": [
+    {
+      "name": "Example Tag Manager",
+      "category": "tag_management",
+      "state": "detected",
+      "source_url": "https://example.com/",
+      "evidence": "Script signature observed in public HTML.",
+      "confidence": 0.82
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "account": {
+    "name": "Northstar Cloud",
+    "domain": "northstar.example",
+    "b2b": true,
+    "high_acv": true,
+    "employee_count": 240,
+    "external_signals": {
+      "active_ad_channels": ["linkedin", "google_search"],
+      "detected_technologies": ["hubspot", "linkedin_insight_tag"],
+      "recent_triggers": ["new VP Demand Generation", "enterprise product launch"]
+    }
+  },
+  "pages": [
+    {
+      "url": "https://northstar.example/resources/cloud-security-benchmark-report",
+      "title": "2026 Cloud Security Benchmark Report",
+      "text": "Download the 2026 research report. Complete the form to access the report.",
+      "published_at": "2026-08-15",
+      "links": [],
+      "forms": [{"purpose": "download", "fields": ["first_name", "email", "company", "job_title"]}]
+    },
+    {
+      "url": "https://northstar.example/customers/acme",
+      "title": "Acme customer story",
+      "text": "Case study: Acme reduced cloud response time by 42%. Book a demo to see the platform.",
+      "published_at": "2026-06-02",
+      "links": ["https://northstar.example/demo"],
+      "forms": []
+    },
+    {
+      "url": "https://northstar.example/industries/financial-services",
+      "title": "Cloud security for financial services",
+      "text": "Protect regulated workloads and contact sales for a tailored assessment.",
+      "links": ["https://northstar.example/contact"],
+      "forms": []
+    }
+  ]
+}

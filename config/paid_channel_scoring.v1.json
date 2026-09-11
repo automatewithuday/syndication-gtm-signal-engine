@@ -1,0 +1,26 @@
+{
+  "version": "paid_channels_v1",
+  "readiness": {
+    "retargeting": {
+      "ad_activity": 25,
+      "tracked_destinations": 20,
+      "observable_technology": 25,
+      "content_inventory": 30
+    },
+    "programmatic": {
+      "ad_activity": 20,
+      "platform_diversity": 20,
+      "tracked_destinations": 20,
+      "observable_technology": 20,
+      "content_diversity": 20
+    }
+  },
+  "qualification": {
+    "minimum_readiness": 65,
+    "minimum_confidence": 0.6
+  },
+  "calibration": {
+    "status": "provisional",
+    "note": "Fixture-tested; not calibrated for unattended qualification."
+  }
+}

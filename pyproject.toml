@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gtm-signal-engine"
+version = "1.0.0"
+description = "Evidence-first B2B channel opportunity detection"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "LicenseRef-Proprietary"
+authors = [{name = "Martechs"}]
+dependencies = []
+
+[project.optional-dependencies]
+scrape = ["scrapling[fetchers]>=0.4.15,<0.5"]
+
+[project.scripts]
+gtm-signals = "gtm_signal_engine.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+gtm_signal_engine = ["migrations/*.sql"]
+
+[tool.setuptools.data-files]
+"share/gtm-signal-engine" = [
+    "config/content_syndication_scoring.v1.json",
+    "config/content_syndication_scoring.v2.json",
+    "config/paid_channel_scoring.v1.json",
+]
