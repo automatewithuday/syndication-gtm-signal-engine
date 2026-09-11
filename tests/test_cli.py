@@ -78,6 +78,20 @@ class CliTests(unittest.TestCase):
         self.assertEqual(Path("data/runs/test"), mocked.call_args.args[0])
         self.assertEqual("example.com", mocked.call_args.args[1])
         self.assertEqual("Example", mocked.call_args.kwargs["account_name"])
+        self.assertEqual(("linkedin", "meta"), mocked.call_args.kwargs["platforms"])
+
+    def test_apify_platform_selection_reaches_live_collector(self):
+        result = SimpleNamespace(
+            provider="apify_ads", records=[], raw_payload_location=None,
+            incomplete=False, warnings=[],
+        )
+        with patch.object(cli, "collect_apify_ads", return_value=result) as mocked, \
+             patch("builtins.print"):
+            cli.main([
+                "collect-apify-ads", "data/runs/test", "example.com",
+                "--account-name", "Example", "--platform", "meta",
+            ])
+        self.assertEqual(("meta",), mocked.call_args.kwargs["platforms"])
 
 
 if __name__ == "__main__":

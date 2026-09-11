@@ -17,8 +17,9 @@ from .external_signals import AdObservation, parse_campaign_url
 from .providers import ProviderResult
 from .vault import MacOSKeychainVault, SecretVault
 
-APIFY_COLLECTION_VERSION = "apify_ads_v1"
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "apify_ads.v1.json"
+SUPPORTED_CONFIG_VERSIONS = {"apify_ads_v1", "apify_ads_v2"}
+APIFY_NORMALIZER_VERSION = "apify_ads_normalizer_v2"
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "apify_ads.v2.json"
 TERMINAL_RUN_STATUSES = {"SUCCEEDED", "FAILED", "TIMED-OUT", "ABORTED"}
 
 
@@ -32,9 +33,9 @@ def _sha256(value: bytes) -> str:
 
 def _default_config() -> Path:
     candidates = (
-        Path.cwd() / "config" / "apify_ads.v1.json",
+        Path.cwd() / "config" / "apify_ads.v2.json",
         DEFAULT_CONFIG_PATH,
-        Path(sys.prefix) / "share" / "gtm-signal-engine" / "apify_ads.v1.json",
+        Path(sys.prefix) / "share" / "gtm-signal-engine" / "apify_ads.v2.json",
     )
     return next((candidate for candidate in candidates if candidate.exists()), candidates[0])
 
@@ -126,7 +127,7 @@ def _account_search_urls(account_name: str, config: dict[str, Any]) -> dict[str,
     })
     meta_query = urllib.parse.urlencode({
         "active_status": "active", "ad_type": "all", "country": "ALL",
-        "q": account_name, "search_type": "keyword_unordered",
+        "q": account_name, "search_type": str(config.get("meta_search_type", "keyword_unordered")),
     })
     return {
         "linkedin": f"https://www.linkedin.com/ad-library/search?{linkedin_query}",
@@ -149,6 +150,15 @@ def _actor_input(platform: str, search_url: str, results_limit: int) -> dict[str
 def _matches_domain(url: str, domain: str) -> bool:
     hostname = (urlsplit(url).hostname or "").lower().removeprefix("www.")
     return hostname == domain or hostname.endswith(f".{domain}")
+
+
+def _normalized_name(value: str) -> str:
+    return "".join(character for character in value.casefold() if character.isalnum())
+
+
+def _attributable(*, advertiser_name: str, account_name: str, destination: str, domain: str) -> bool:
+    exact_name = bool(advertiser_name) and _normalized_name(advertiser_name) == _normalized_name(account_name)
+    return exact_name or _matches_domain(destination, domain)
 
 
 def _first_text(*values: Any) -> str:
@@ -178,8 +188,20 @@ def _meta_links(record: dict[str, Any]) -> list[str]:
     return [str(value) for value in candidates if isinstance(value, str) and canonicalize_url(value)]
 
 
+def _meta_ad_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Accept both direct ad rows and the actor's zero/small-result envelope."""
+    flattened: list[dict[str, Any]] = []
+    for record in records:
+        nested = record.get("results")
+        if isinstance(nested, list):
+            flattened.extend(item for item in nested if isinstance(item, dict))
+        else:
+            flattened.append(record)
+    return flattened
+
+
 def normalize_apify_linkedin(
-    records: list[dict[str, Any]], *, domain: str, observed_at: str
+    records: list[dict[str, Any]], *, domain: str, account_name: str, observed_at: str
 ) -> tuple[list[AdObservation], list[str]]:
     observations: list[AdObservation] = []
     warnings: list[str] = []
@@ -187,8 +209,15 @@ def normalize_apify_linkedin(
     for index, record in enumerate(records):
         record_id = str(record.get("adId") or "")
         destination = str(record.get("clickUrl") or "")
-        if not record_id or not canonicalize_url(destination) or not _matches_domain(destination, domain):
-            warnings.append(f"linkedin record {index} skipped: missing ID or attributable account destination")
+        advertiser_name = str(record.get("advertiserName") or "")
+        if (
+            not record_id or not canonicalize_url(destination)
+            or not _attributable(
+                advertiser_name=advertiser_name, account_name=account_name,
+                destination=destination, domain=domain,
+            )
+        ):
+            warnings.append(f"linkedin record {index} skipped: missing ID/destination or account attribution")
             continue
         if record_id in seen:
             continue
@@ -200,30 +229,38 @@ def normalize_apify_linkedin(
         observations.append(AdObservation(
             platform="linkedin", provider_record_id=record_id, creative_text=creative,
             destination=parse_campaign_url(destination),
-            source_url=f"https://www.linkedin.com/ad-library/detail/{record_id}",
+            source_url=str(record.get("adLibraryUrl") or f"https://www.linkedin.com/ad-library/detail/{record_id}"),
             observed_at=observed_at, first_seen_at=availability.get("start"),
             last_seen_at=availability.get("end"), confidence=0.9,
-            method="apify_linkedin_ads_v1", normalizer_version="apify_ads_v1",
+            method="apify_linkedin_ads_v1", normalizer_version=APIFY_NORMALIZER_VERSION,
         ))
     return observations, warnings
 
 
 def normalize_apify_meta(
-    records: list[dict[str, Any]], *, domain: str, observed_at: str
+    records: list[dict[str, Any]], *, domain: str, account_name: str, observed_at: str
 ) -> tuple[list[AdObservation], list[str]]:
     observations: list[AdObservation] = []
     warnings: list[str] = []
     seen: set[str] = set()
-    for index, record in enumerate(records):
+    for index, record in enumerate(_meta_ad_records(records)):
         record_id = str(record.get("adArchiveID") or record.get("adArchiveId") or record.get("adId") or "")
-        destination = next((url for url in _meta_links(record) if _matches_domain(url, domain)), "")
-        if not record_id or not destination:
-            warnings.append(f"meta record {index} skipped: missing ID or attributable account destination")
+        links = _meta_links(record)
+        destination = next((url for url in links if _matches_domain(url, domain)), links[0] if links else "")
+        snapshot = record.get("snapshot") if isinstance(record.get("snapshot"), dict) else {}
+        advertiser_name = str(record.get("pageName") or snapshot.get("pageName") or "")
+        if (
+            not record_id or not destination
+            or not _attributable(
+                advertiser_name=advertiser_name, account_name=account_name,
+                destination=destination, domain=domain,
+            )
+        ):
+            warnings.append(f"meta record {index} skipped: missing ID/destination or account attribution")
             continue
         if record_id in seen:
             continue
         seen.add(record_id)
-        snapshot = record.get("snapshot") if isinstance(record.get("snapshot"), dict) else {}
         cards = snapshot.get("cards") if isinstance(snapshot.get("cards"), list) else []
         card = next((item for item in cards if isinstance(item, dict)), {})
         creative = " — ".join(filter(None, [
@@ -237,7 +274,7 @@ def normalize_apify_meta(
             observed_at=observed_at,
             first_seen_at=_timestamp(record.get("startDateFormatted") or record.get("startDate")),
             last_seen_at=_timestamp(record.get("endDateFormatted") or record.get("endDate")),
-            confidence=0.9, method="apify_meta_ads_v1", normalizer_version="apify_ads_v1",
+            confidence=0.9, method="apify_meta_ads_v1", normalizer_version=APIFY_NORMALIZER_VERSION,
         ))
     return observations, warnings
 
@@ -327,28 +364,40 @@ def collect_apify_ads(
     *,
     account_name: str,
     config_path: Path | None = None,
+    platforms: tuple[str, ...] = ("linkedin", "meta"),
     vault: SecretVault | None = None,
     transport: ApifyTransport | None = None,
 ) -> ProviderResult:
     domain = _domain(domain)
     if not account_name.strip():
         raise ValueError("account name is required")
+    if not platforms or set(platforms).difference({"linkedin", "meta"}):
+        raise ValueError("platforms must contain linkedin, meta, or both")
     _validate_run_domain(run_dir, domain)
     selected_config = config_path or _default_config()
     config_bytes = selected_config.read_bytes()
     config = json.loads(config_bytes)
-    if config.get("version") != APIFY_COLLECTION_VERSION:
+    if config.get("version") not in SUPPORTED_CONFIG_VERSIONS:
         raise ValueError("unsupported Apify collection configuration")
     raw_dir = run_dir / "raw"
     normalized_dir = run_dir / "normalized"
     raw_dir.mkdir(parents=True, exist_ok=True)
     normalized_dir.mkdir(parents=True, exist_ok=True)
     status_path = normalized_dir / "apify_collection.json"
+    previous_status = (
+        json.loads(status_path.read_text(encoding="utf-8")) if status_path.is_file() else {}
+    )
+    selected_platforms = tuple(dict.fromkeys(platforms))
+    retained_platform_status = {
+        key: value for key, value in previous_status.get("platforms", {}).items()
+        if key not in set(selected_platforms)
+    }
     status: dict[str, Any] = {
-        "schema_version": "1.0", "collector_version": APIFY_COLLECTION_VERSION,
+        "schema_version": "1.0", "collector_version": config["version"],
+        "normalizer_version": APIFY_NORMALIZER_VERSION,
         "domain": domain, "account_name": account_name.strip(), "started_at": _now(),
         "finished_at": None, "status": "running", "incomplete": True,
-        "config_sha256": _sha256(config_bytes), "platforms": {},
+        "config_sha256": _sha256(config_bytes), "platforms": retained_platform_status,
         "request_policy": {
             "automatic_paid_retries": False,
             "max_items_per_actor": int(config["results_limit"]),
@@ -356,7 +405,7 @@ def collect_apify_ads(
                 key: float(value["max_total_charge_usd"]) for key, value in config["actors"].items()
             },
         },
-        "warnings": [],
+        "selected_platforms": list(selected_platforms), "warnings": [],
     }
     status_path.write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     try:
@@ -373,7 +422,7 @@ def collect_apify_ads(
     transport = transport or UrllibApifyTransport()
     search_urls = _account_search_urls(account_name.strip(), config)
     observations: list[AdObservation] = []
-    for platform in ("linkedin", "meta"):
+    for platform in selected_platforms:
         try:
             actor_input = _actor_input(platform, search_urls[platform], int(config["results_limit"]))
             records, platform_status = _run_actor(
@@ -381,13 +430,19 @@ def collect_apify_ads(
                 transport=transport, raw_dir=raw_dir, config=config, run_dir=run_dir,
             )
             normalized, warnings = (
-                normalize_apify_linkedin(records, domain=domain, observed_at=_now())
+                normalize_apify_linkedin(
+                    records, domain=domain, account_name=account_name.strip(), observed_at=_now()
+                )
                 if platform == "linkedin"
-                else normalize_apify_meta(records, domain=domain, observed_at=_now())
+                else normalize_apify_meta(
+                    records, domain=domain, account_name=account_name.strip(), observed_at=_now()
+                )
             )
             observations.extend(normalized)
+            candidate_records = len(records) if platform == "linkedin" else len(_meta_ad_records(records))
             status["platforms"][platform] = {
                 **platform_status, "raw_records": len(records), "normalized_records": len(normalized),
+                "candidate_records": candidate_records,
                 "search_url": search_urls[platform], "warnings": warnings,
             }
             status["warnings"].extend(warnings)
@@ -398,7 +453,13 @@ def collect_apify_ads(
     completed = all(item.get("status") == "SUCCEEDED" for item in status["platforms"].values())
     profile_path = normalized_dir / "external_profile.json"
     profile = json.loads(profile_path.read_text(encoding="utf-8")) if profile_path.is_file() else {}
-    profile.update({"schema_version": "1.0", "domain": domain, "ads": [asdict(item) for item in observations]})
+    retained_ads = [
+        item for item in profile.get("ads", []) if item.get("platform") not in set(selected_platforms)
+    ]
+    profile.update({
+        "schema_version": "1.0", "domain": domain,
+        "ads": [*retained_ads, *[asdict(item) for item in observations]],
+    })
     profile.setdefault("technologies", [])
     profile.setdefault("gap_observations", [])
     profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -414,4 +475,63 @@ def collect_apify_ads(
         provider="apify_ads", query=domain, records=[asdict(item) for item in observations],
         raw_payload_location=",".join(raw_locations) or None,
         incomplete=not completed, warnings=list(status["warnings"]),
+    )
+
+
+def replay_apify_ads(
+    run_dir: Path, domain: str, *, account_name: str
+) -> ProviderResult:
+    """Re-normalize saved actor datasets without starting another paid run."""
+    domain = _domain(domain)
+    _validate_run_domain(run_dir, domain)
+    status_path = run_dir / "normalized" / "apify_collection.json"
+    if not status_path.is_file():
+        raise FileNotFoundError("saved Apify collection status is required for replay")
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    observations: list[AdObservation] = []
+    warnings: list[str] = []
+    for platform, details in status.get("platforms", {}).items():
+        if platform not in {"linkedin", "meta"}:
+            warnings.append(f"{platform}: unsupported saved platform")
+            continue
+        location = details.get("raw", {}).get("dataset")
+        if not location:
+            warnings.append(f"{platform}: saved dataset location is unavailable")
+            continue
+        records = json.loads((run_dir / location).read_text(encoding="utf-8"))
+        normalized, platform_warnings = (
+            normalize_apify_linkedin(
+                records, domain=domain, account_name=account_name, observed_at=_now()
+            )
+            if platform == "linkedin"
+            else normalize_apify_meta(
+                records, domain=domain, account_name=account_name, observed_at=_now()
+            )
+        )
+        observations.extend(normalized)
+        warnings.extend(platform_warnings)
+        details["candidate_records"] = (
+            len(records) if platform == "linkedin" else len(_meta_ad_records(records))
+        )
+        details["normalized_records"] = len(normalized)
+        details["warnings"] = platform_warnings
+    profile_path = run_dir / "normalized" / "external_profile.json"
+    profile = json.loads(profile_path.read_text(encoding="utf-8")) if profile_path.is_file() else {}
+    replayed_platforms = set(status.get("platforms", {}))
+    retained_ads = [item for item in profile.get("ads", []) if item.get("platform") not in replayed_platforms]
+    profile.update({
+        "schema_version": "1.0", "domain": domain,
+        "ads": [*retained_ads, *[asdict(item) for item in observations]],
+    })
+    profile.setdefault("technologies", [])
+    profile.setdefault("gap_observations", [])
+    profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    status.update({
+        "normalizer_version": APIFY_NORMALIZER_VERSION, "replayed_at": _now(),
+        "records": len(observations), "warnings": warnings,
+    })
+    status_path.write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return ProviderResult(
+        provider="apify_ads_replay", query=domain,
+        records=[asdict(item) for item in observations], warnings=warnings,
     )

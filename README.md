@@ -272,10 +272,21 @@ The versioned default uses
 for LinkedIn and Apify's maintained
 [`apify/facebook-ads-scraper`](https://apify.com/apify/facebook-ads-scraper)
 for Meta. Actor builds, result limits, timeouts, and per-run dollar caps are
-pinned in `config/apify_ads.v1.json`. Paid starts are never automatically
-retried. Only ads with a destination attributable to the account domain enter
-the normalized profile; unmatched name-search results remain raw and generate
-warnings rather than evidence.
+pinned in `config/apify_ads.v2.json`. Paid starts are never automatically
+retried. An ad enters the normalized profile only when its advertiser name
+exactly matches the requested account after conservative normalization, or its
+destination belongs to the account domain. Unattributable name-search results
+remain raw and generate warnings rather than evidence.
+
+Limit a corrective run to one platform without replacing saved evidence from
+the other platform, or replay already saved datasets without a paid actor call:
+
+```bash
+uv run gtm-signals collect-apify-ads \
+  data/runs/<run-id> example.com --account-name "Example" --platform meta
+uv run gtm-signals replay-apify-ads \
+  data/runs/<run-id> example.com --account-name "Example"
+```
 
 Run local batches and resume jobs through SQLite:
 

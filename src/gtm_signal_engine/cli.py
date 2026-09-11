@@ -32,7 +32,7 @@ from .review_report import build_account_review
 from .workflow import crawl_and_analyze
 from .paid_channel_scoring import score_paid_channel_run
 from .external_collection import collect_deepline_technologies
-from .apify_collection import collect_apify_ads
+from .apify_collection import collect_apify_ads, replay_apify_ads
 from .jobs import enqueue_batch, list_jobs, run_job, run_pending_jobs
 from .validation import (
     create_outreach_snapshot,
@@ -150,6 +150,13 @@ def build_parser() -> argparse.ArgumentParser:
     apify.add_argument("domain")
     apify.add_argument("--account-name", required=True)
     apify.add_argument("--config", type=Path)
+    apify.add_argument("--platform", action="append", choices=("linkedin", "meta"))
+    apify_replay = subparsers.add_parser(
+        "replay-apify-ads", help="Re-normalize saved Apify datasets without a paid run"
+    )
+    apify_replay.add_argument("run_dir", type=Path)
+    apify_replay.add_argument("domain")
+    apify_replay.add_argument("--account-name", required=True)
     enqueue = subparsers.add_parser("enqueue-batch", help="Idempotently enqueue CSV/JSONL account jobs")
     enqueue.add_argument("input", type=Path)
     enqueue.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
@@ -347,7 +354,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1 if result.incomplete else 0
     if args.command == "collect-apify-ads":
         result = collect_apify_ads(
-            args.run_dir, args.domain, account_name=args.account_name, config_path=args.config
+            args.run_dir, args.domain, account_name=args.account_name, config_path=args.config,
+            platforms=tuple(args.platform) if args.platform else ("linkedin", "meta"),
         )
         print(json.dumps({
             "provider": result.provider,
@@ -357,6 +365,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             "warnings": result.warnings,
         }, indent=2, sort_keys=True))
         return 1 if result.incomplete else 0
+    if args.command == "replay-apify-ads":
+        result = replay_apify_ads(args.run_dir, args.domain, account_name=args.account_name)
+        print(json.dumps({
+            "provider": result.provider, "records": len(result.records),
+            "incomplete": result.incomplete, "warnings": result.warnings,
+        }, indent=2, sort_keys=True))
+        return 0
     if args.command == "enqueue-batch":
         result = enqueue_batch(args.input, args.database)
         print(json.dumps(result, indent=2, sort_keys=True))

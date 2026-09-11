@@ -37,12 +37,15 @@ and company metadata, retains the raw response and billing metadata, binds the
 domain to the exact Scrapling run, and records failures as incomplete. The
 resulting technology signals feed versioned `paid_channels_v2` scoring.
 
-The Apify live boundary is implemented and fixture-tested with pinned LinkedIn
-and Meta actor builds, asynchronous run IDs, bounded polling, explicit item and
-dollar caps, Keychain-only bearer authentication, immutable raw payloads, and
-domain-attributable destination filtering. Live collection is blocked only by
-the missing `apify-token` Keychain entry. Until real ad observations exist,
-paid-channel readiness remains review-only and gap remains unknown.
+The Apify live boundary is implemented, fixture-tested, and live-validated with
+pinned LinkedIn and Meta actor builds, asynchronous run IDs, bounded polling,
+explicit item/dollar caps, Keychain-only bearer authentication, immutable raw
+payloads, exact account attribution, platform-selective correction, and free
+raw-dataset replay. DailyPay has four attributable LinkedIn ads and two Meta
+ads; its retargeting and programmatic readiness scores are both 80 and
+provisional-pass. ColdIQ's bounded queries returned no attributable ads; this
+remains uncertainty, not negative evidence, and its readiness stays in review.
+Gap scores for both accounts remain unknown.
 
 ## Phase 3 — Persistence and orchestration
 
@@ -68,7 +71,10 @@ labeled/outcome sample exists; the system does not fabricate calibration.
 
 ## Current real-account decision
 
-DailyPay and ColdIQ both pass provisional fit and content readiness. Neither is
-qualified as a content-syndication opportunity because verified gap evidence is
-absent; absence on the public web is kept as unknown. Review reports are stored
-inside each authoritative run under `normalized/account_review.{json,md}`.
+DailyPay and ColdIQ both pass provisional fit and content readiness. DailyPay
+also passes provisional paid-channel readiness after live ad and technology
+collection; ColdIQ's paid-channel readiness remains in review. Neither account
+is qualified as a channel-gap opportunity because verified gap evidence is
+absent; absence on the public web or in bounded provider results is kept as
+unknown. Review reports are stored inside each authoritative run under
+`normalized/account_review.{json,md}`.

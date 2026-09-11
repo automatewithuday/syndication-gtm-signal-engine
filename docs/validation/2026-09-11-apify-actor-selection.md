@@ -33,9 +33,15 @@ Sources:
   180-second server-side timeout.
 - Actor metadata, run start/final objects, and dataset payloads use content-hash
   filenames under the ignored run `raw/` directory.
-- LinkedIn and Meta use separate provider-specific normalizers. Only records
-  with an ad ID and a landing URL on the account domain or a subdomain become
-  normalized ad evidence.
+- LinkedIn and Meta use separate provider-specific normalizers. A record needs
+  an ad ID and landing URL, plus either an exact normalized advertiser-name
+  match or a landing destination on the account domain. This admits attributable
+  first-party short links while rejecting similarly named advertisers.
+- Meta uses exact-phrase account search. The normalizer accepts both direct ad
+  rows and the actor's zero-result envelope.
+- Corrective runs can target one platform while retaining the other platform's
+  evidence and run metadata. Saved datasets can be replayed without starting a
+  paid actor.
 - Empty or unmatched results are uncertainty, not proof that the company is not
   advertising.
 
@@ -48,20 +54,37 @@ parameters. Tests cover domain attribution, false-positive exclusion, vault
 failure before network access, spend caps, token non-persistence, immutable raw
 artifacts, and no paid POST retry.
 
-## Live blocker
+## Live validation
 
-Both authoritative commands were attempted locally. Each stopped before any
-network or paid actor call because `apify-token` is not present in the configured
-Keychain. The run-local `normalized/apify_collection.json` files record
-`status: blocked`, `incomplete: true`, and zero normalized records. No Apify
-cost was incurred.
+The token was stored in the configured Keychain. Sandboxed processes could not
+initially see the user's Keychain item; running the scoped collector with host
+Keychain access resolved the blocker without copying the token into a file or
+command argument.
 
-After a scoped token is stored in Keychain, rerun:
+The first DailyPay canary returned 25 LinkedIn rows and 25 Meta rows. Four
+LinkedIn ads were attributable to the exact `DailyPay` advertiser, but their
+destinations used `bit.ly` or LinkedIn, exposing a false negative in the
+domain-only attribution rule. The original unordered Meta keyword search
+returned unrelated advertisers, all of which the attribution gate rejected.
+Replaying the immutable datasets after adding exact advertiser-name attribution
+recovered the four LinkedIn records without another paid call.
 
-```bash
-uv run gtm-signals collect-apify-ads \
-  data/runs/20260910T224631Z-52eaa2e5 dailypay.com --account-name DailyPay
+The v2 exact-phrase Meta canary returned 25 candidate rows and two attributable
+DailyPay ads. The final DailyPay profile therefore contains six ads: four
+LinkedIn and two Meta. The original LinkedIn run reported $0.09205 usage, the
+discarded broad Meta result reported $0.058, and the corrected Meta run reported
+$0.00: $0.15005 total DailyPay validation usage. With 442 technology detections
+and the saved website assets, retargeting readiness is 80/100 at 0.675
+confidence and programmatic readiness is 80/100 at 0.72 confidence. Both gaps
+remain null/unknown.
 
-uv run gtm-signals collect-apify-ads \
-  data/runs/20260910T224633Z-e599a4a6 coldiq.com --account-name ColdIQ
-```
+ColdIQ returned zero LinkedIn candidates and a completed Meta zero-result
+envelope. The envelope reported `totalCount: 0`, no captcha, and no known Ad
+Library system issue. The LinkedIn run reported $0.00005 usage and Meta reported
+$0.00. This bounded result is retained as collection coverage, not proof that
+ColdIQ does not advertise. Retargeting readiness remains 55/100 at 0.45
+confidence and programmatic readiness 40/100 at 0.36; both require review and
+both gap components remain null/unknown.
+
+The complete deterministic suite passes 112/112 tests, and the source and wheel
+artifacts build successfully with both v1 and v2 Apify configurations packaged.

@@ -173,6 +173,17 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
 - Normalize paid-ad destinations into both observed and canonical URLs; preserve
   UTM and click identifiers separately. Technology detection must include its
   source, confidence, and limitations and cannot prove complete or active use.
+- Attribute name-searched ad-library rows only through an exact normalized
+  advertiser-name match or an account-domain destination. Shortened or
+  platform-hosted destinations make domain-only attribution incomplete, while
+  fuzzy advertiser names create false positives.
+- Use the narrowest provider-supported account query, preserve unmatched rows as
+  raw data, and support free replay of saved datasets when normalization changes.
+  Accept documented direct-row and result-envelope variants; an empty completed
+  provider result is collection coverage, never proof that advertising is absent.
+- Make corrective paid-provider runs platform-selective and preserve the other
+  platform's prior evidence and provenance. Never automatically retry an
+  ambiguous paid start.
 - Freeze the exact score and evidence snapshot before recording an authorized
   outreach send. Attribute downstream outcomes to that snapshot and evaluate
   meetings/opportunities by signal and channel, not reply rate alone.

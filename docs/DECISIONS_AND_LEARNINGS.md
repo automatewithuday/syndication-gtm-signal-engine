@@ -531,7 +531,34 @@ coverage rather than raw page count.
   therefore requires an ad ID and a landing destination on the exact account
   domain or one of its subdomains. Unattributable records stay in ignored raw
   data and produce warnings instead of entering scoring.
-- Live DailyPay and ColdIQ commands now create an explicit `blocked` collection
-  state because `gtm-signal-engine:apify-token` is absent from the configured
-  Keychain. No actor was started and no Apify cost was incurred. Validation is
-  recorded in `docs/validation/2026-09-11-apify-actor-selection.md`.
+- The initial DailyPay and ColdIQ commands created an explicit `blocked`
+  collection state when the restricted process could not access the configured
+  Keychain item. No actor was started and no Apify cost was incurred during
+  those attempts. The later resolution is recorded below.
+
+### 2026-09-11 — Live Apify canaries and attribution correction
+
+- The Keychain token was present, but the restricted process could not see the
+  user's login Keychain. Scoped host access resolved the blocker; the credential
+  remained outside files, subprocess arguments, URLs, and artifacts.
+- DailyPay proved domain-only destination attribution was too strict: four
+  exact-advertiser LinkedIn ads used `bit.ly` or LinkedIn destinations. Added a
+  conservative alternative gate requiring exact normalized advertiser name.
+  Similar names still fail attribution.
+- Unordered Meta keyword search returned unrelated advertisers. Added
+  `apify_ads_v2` with exact-phrase search and retained v1 for replay. The
+  corrected query yielded two attributable DailyPay Meta ads.
+- Added local dataset replay so normalizer fixes do not require another paid
+  run, plus platform-selective collection that preserves unselected ads and run
+  metadata.
+- ColdIQ exposed a second documented actor shape: a zero-result envelope with a
+  nested `results` list. The normalizer now flattens envelopes and treats an
+  empty completed envelope as zero candidates, not a malformed ad warning.
+- DailyPay now has six attributable ads across LinkedIn and Meta. Its
+  retargeting/programmatic readiness scores are 80/80, while both gaps remain
+  unknown. ColdIQ produced no attributable ads in this bounded run; its scores
+  remain 55/40 and review-only, with gaps unknown. Provider absence never became
+  a claim that a channel is unused.
+- Total live Apify validation usage was $0.15005 for DailyPay and $0.00005 for
+  ColdIQ. The complete fixture-only suite passes 112 tests, and package builds
+  include both the replayable v1 and current v2 configurations.

@@ -34,4 +34,5 @@ gtm_signal_engine = ["migrations/*.sql"]
     "config/paid_channel_scoring.v1.json",
     "config/paid_channel_scoring.v2.json",
     "config/apify_ads.v1.json",
+    "config/apify_ads.v2.json",
 ]

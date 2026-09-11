@@ -12,6 +12,7 @@ from gtm_signal_engine.apify_collection import (
     collect_apify_ads,
     normalize_apify_linkedin,
     normalize_apify_meta,
+    replay_apify_ads,
 )
 
 
@@ -54,14 +55,17 @@ class ApifyCollectionTests(unittest.TestCase):
         linkedin = json.loads((ROOT / "tests/fixtures/providers/apify_linkedin_raw.json").read_text())
         meta = json.loads((ROOT / "tests/fixtures/providers/apify_meta_raw.json").read_text())
         linked, linked_warnings = normalize_apify_linkedin(
-            linkedin, domain="example.com", observed_at="2026-09-11T00:00:00+00:00"
+            linkedin, domain="example.com", account_name="Example",
+            observed_at="2026-09-11T00:00:00+00:00",
         )
         facebook, meta_warnings = normalize_apify_meta(
-            meta, domain="example.com", observed_at="2026-09-11T00:00:00+00:00"
+            meta, domain="example.com", account_name="Example",
+            observed_at="2026-09-11T00:00:00+00:00",
         )
         self.assertEqual(["li-123"], [item.provider_record_id for item in linked])
         self.assertEqual(["meta-456"], [item.provider_record_id for item in facebook])
-        self.assertEqual("apify_ads_v1", linked[0].normalizer_version)
+        self.assertEqual("apify_ads_normalizer_v2", linked[0].normalizer_version)
+        self.assertTrue(linked[0].destination.observed_url.startswith("https://bit.ly/"))
         self.assertEqual({"fbclid": "click-2"}, facebook[0].destination.click_identifiers)
         self.assertEqual(1, len(linked_warnings))
         self.assertEqual(1, len(meta_warnings))
@@ -117,6 +121,70 @@ class ApifyCollectionTests(unittest.TestCase):
             self.assertNotIn("secret-token", persisted)
             for artifact in run_dir.rglob("*.json"):
                 self.assertNotIn("secret-token", artifact.read_text())
+
+    def test_platform_selection_preserves_existing_other_platform_ads(self):
+        meta = json.loads((ROOT / "tests/fixtures/providers/apify_meta_raw.json").read_text())
+        responses = [
+            response({"isPublic": True, "isDeprecated": False}),
+            response({"id": "run-meta", "status": "READY"}),
+            response({"id": "run-meta", "status": "SUCCEEDED", "defaultDatasetId": "ds-meta"}),
+            (200, meta),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            run_dir = self._run_dir(Path(temporary))
+            profile_path = run_dir / "normalized/external_profile.json"
+            profile_path.write_text(json.dumps({
+                "domain": "example.com", "technologies": [], "gap_observations": [],
+                "ads": [{"platform": "linkedin", "provider_record_id": "saved-li"}],
+            }))
+            (run_dir / "normalized/apify_collection.json").write_text(json.dumps({
+                "platforms": {"linkedin": {"status": "SUCCEEDED", "raw": {}}}
+            }))
+            transport = FakeTransport(responses)
+            result = collect_apify_ads(
+                run_dir, "example.com", account_name="Example", platforms=("meta",),
+                vault=FakeVault(), transport=transport,
+            )
+            self.assertFalse(result.incomplete)
+            self.assertEqual(1, len([item for item in transport.requests if item["method"] == "POST"]))
+            profile = json.loads(profile_path.read_text())
+            self.assertEqual(
+                {"saved-li", "meta-456"}, {item["provider_record_id"] for item in profile["ads"]}
+            )
+            status = json.loads((run_dir / "normalized/apify_collection.json").read_text())
+            self.assertEqual({"linkedin", "meta"}, set(status["platforms"]))
+
+    def test_replay_renormalizes_saved_datasets_without_network(self):
+        linked = (ROOT / "tests/fixtures/providers/apify_linkedin_raw.json").read_bytes()
+        meta = (ROOT / "tests/fixtures/providers/apify_meta_raw.json").read_bytes()
+        with tempfile.TemporaryDirectory() as temporary:
+            run_dir = self._run_dir(Path(temporary))
+            raw_dir = run_dir / "raw"
+            raw_dir.mkdir()
+            (raw_dir / "linkedin.json").write_bytes(linked)
+            (raw_dir / "meta.json").write_bytes(meta)
+            (run_dir / "normalized/apify_collection.json").write_text(json.dumps({
+                "platforms": {
+                    "linkedin": {"raw": {"dataset": "raw/linkedin.json"}},
+                    "meta": {"raw": {"dataset": "raw/meta.json"}},
+                }
+            }))
+            result = replay_apify_ads(run_dir, "example.com", account_name="Example")
+            self.assertEqual(2, len(result.records))
+            profile = json.loads((run_dir / "normalized/external_profile.json").read_text())
+            self.assertEqual({"linkedin", "meta"}, {item["platform"] for item in profile["ads"]})
+
+    def test_meta_zero_result_envelope_is_not_treated_as_an_ad(self):
+        records = [{
+            "inputUrl": "https://www.facebook.com/ads/library/",
+            "isResultComplete": True, "totalCount": 0, "results": [],
+        }]
+        observations, warnings = normalize_apify_meta(
+            records, domain="example.com", account_name="Example",
+            observed_at="2026-09-11T00:00:00+00:00",
+        )
+        self.assertEqual([], observations)
+        self.assertEqual([], warnings)
 
     def test_paid_start_is_not_retried_after_failure(self):
         responses = [
