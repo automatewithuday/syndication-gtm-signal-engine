@@ -149,6 +149,7 @@ def build_parser() -> argparse.ArgumentParser:
     apify.add_argument("run_dir", type=Path)
     apify.add_argument("domain")
     apify.add_argument("--account-name", required=True)
+    apify.add_argument("--linkedin-company-id")
     apify.add_argument("--config", type=Path)
     apify.add_argument("--platform", action="append", choices=("linkedin", "meta"))
     apify_replay = subparsers.add_parser(
@@ -355,6 +356,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "collect-apify-ads":
         result = collect_apify_ads(
             args.run_dir, args.domain, account_name=args.account_name, config_path=args.config,
+            linkedin_company_id=args.linkedin_company_id,
             platforms=tuple(args.platform) if args.platform else ("linkedin", "meta"),
         )
         print(json.dumps({

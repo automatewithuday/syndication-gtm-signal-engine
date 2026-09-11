@@ -30,6 +30,15 @@ class PaidChannelScoringTests(unittest.TestCase):
         self.assertIsNone(result["channels"]["retargeting"]["gap"]["score"])
         self.assertEqual("insufficient_evidence", result["channels"]["programmatic"]["gap"]["status"])
 
+    def test_ad_without_destination_counts_as_activity_but_not_tracking(self):
+        undirected = dict(self.profile["ads"][0])
+        undirected["provider_record_id"] = "ad-without-destination"
+        undirected["destination"] = None
+        self.profile["ads"] = [undirected]
+        result = score_paid_channels(self.profile, self.summary, self.config)
+        self.assertEqual(1, result["metrics"]["ads"])
+        self.assertEqual(0, result["metrics"]["tracked_destinations"])
+
     def test_only_approved_positive_gap_evidence_scores(self):
         self.profile["gap_observations"] = [{
             "channel": "retargeting", "position": "supports_gap", "url": "https://example.com/source",

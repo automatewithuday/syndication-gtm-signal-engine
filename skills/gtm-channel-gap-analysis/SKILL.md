@@ -184,6 +184,12 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
 - Make corrective paid-provider runs platform-selective and preserve the other
   platform's prior evidence and provenance. Never automatically retry an
   ambiguous paid start.
+- Prefer a verified provider entity ID over company-name search and persist the
+  identity type/value used. A successful zero-result name query is not adequate
+  coverage when an authoritative entity-ID page exists.
+- Do not require a click destination to retain an attributable ad as activity
+  evidence. Represent an unavailable destination as null and exclude that ad
+  from landing-page and tracking metrics.
 - Freeze the exact score and evidence snapshot before recording an authorized
   outreach send. Attribute downstream outcomes to that snapshot and evaluate
   meetings/opportunities by signal and channel, not reply rate alone.

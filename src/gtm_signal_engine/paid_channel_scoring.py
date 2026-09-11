@@ -35,7 +35,11 @@ def _validate_profile(profile: dict[str, Any]) -> None:
         if required.difference(ad):
             raise ValueError(f"ad observation {index} is missing normalized fields")
         destination = ad["destination"]
-        if not destination.get("observed_url") or not destination.get("canonical_url"):
+        if destination is not None and (
+            not isinstance(destination, dict)
+            or not destination.get("observed_url")
+            or not destination.get("canonical_url")
+        ):
             raise ValueError(f"ad observation {index} lacks observed/canonical destination")
     for index, observation in enumerate(profile.get("gap_observations", [])):
         required = {"channel", "position", "url", "excerpt", "observed_at", "confidence", "review_status"}
@@ -89,7 +93,10 @@ def score_paid_channels(
     platforms = {str(ad["platform"]).lower() for ad in ads}
     tracked = [
         ad for ad in ads
-        if ad["destination"].get("utm_parameters") or ad["destination"].get("click_identifiers")
+        if ad["destination"] and (
+            ad["destination"].get("utm_parameters")
+            or ad["destination"].get("click_identifiers")
+        )
     ]
     tech = [item for item in technologies if item.get("state") == "detected"]
     substantial = int(asset_summary.get("substantial", {}).get("yes", 0))

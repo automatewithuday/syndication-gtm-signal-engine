@@ -78,6 +78,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(Path("data/runs/test"), mocked.call_args.args[0])
         self.assertEqual("example.com", mocked.call_args.args[1])
         self.assertEqual("Example", mocked.call_args.kwargs["account_name"])
+        self.assertIsNone(mocked.call_args.kwargs["linkedin_company_id"])
         self.assertEqual(("linkedin", "meta"), mocked.call_args.kwargs["platforms"])
 
     def test_apify_platform_selection_reaches_live_collector(self):
@@ -90,8 +91,10 @@ class CliTests(unittest.TestCase):
             cli.main([
                 "collect-apify-ads", "data/runs/test", "example.com",
                 "--account-name", "Example", "--platform", "meta",
+                "--linkedin-company-id", "65826193",
             ])
         self.assertEqual(("meta",), mocked.call_args.kwargs["platforms"])
+        self.assertEqual("65826193", mocked.call_args.kwargs["linkedin_company_id"])
 
 
 if __name__ == "__main__":

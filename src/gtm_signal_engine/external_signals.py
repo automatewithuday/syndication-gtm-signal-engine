@@ -23,7 +23,7 @@ class AdObservation:
     platform: str
     provider_record_id: str
     creative_text: str
-    destination: CampaignUrl
+    destination: CampaignUrl | None
     source_url: str
     observed_at: str
     first_seen_at: str | None

@@ -267,6 +267,14 @@ uv run gtm-signals collect-apify-ads \
   data/runs/<run-id> example.com --account-name "Example"
 ```
 
+When the LinkedIn company ID is known, prefer it over name search:
+
+```bash
+uv run gtm-signals collect-apify-ads \
+  data/runs/<run-id> example.com --account-name "Example" \
+  --linkedin-company-id 12345678 --platform linkedin
+```
+
 The versioned default uses
 [`silva95gustavo/linkedin-ad-library-scraper`](https://apify.com/silva95gustavo/linkedin-ad-library-scraper)
 for LinkedIn and Apify's maintained
@@ -277,6 +285,8 @@ retried. An ad enters the normalized profile only when its advertiser name
 exactly matches the requested account after conservative normalization, or its
 destination belongs to the account domain. Unattributable name-search results
 remain raw and generate warnings rather than evidence.
+Attributable ads without a captured click URL still count as ad activity, but
+their destination is null and they cannot contribute tracking evidence.
 
 Limit a corrective run to one platform without replacing saved evidence from
 the other platform, or replay already saved datasets without a paid actor call:

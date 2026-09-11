@@ -40,12 +40,14 @@ resulting technology signals feed versioned `paid_channels_v2` scoring.
 The Apify live boundary is implemented, fixture-tested, and live-validated with
 pinned LinkedIn and Meta actor builds, asynchronous run IDs, bounded polling,
 explicit item/dollar caps, Keychain-only bearer authentication, immutable raw
-payloads, exact account attribution, platform-selective correction, and free
-raw-dataset replay. DailyPay has four attributable LinkedIn ads and two Meta
-ads; its retargeting and programmatic readiness scores are both 80 and
-provisional-pass. ColdIQ's bounded queries returned no attributable ads; this
-remains uncertainty, not negative evidence, and its readiness stays in review.
-Gap scores for both accounts remain unknown.
+payloads, exact account attribution, LinkedIn company-ID targeting,
+platform-selective correction, and free raw-dataset replay. Ads without a
+captured click URL remain valid activity evidence but cannot contribute tracking
+evidence. DailyPay has 25 attributable LinkedIn ads and four Meta ads; its
+retargeting and programmatic readiness scores are both 80 and provisional-pass.
+ColdIQ has 25 attributable LinkedIn ads after switching from name search to its
+company ID; retargeting readiness is 80 and programmatic readiness is 70, both
+provisional-pass. Gap scores for both accounts remain unknown.
 
 ## Phase 3 — Persistence and orchestration
 
@@ -72,8 +74,8 @@ labeled/outcome sample exists; the system does not fabricate calibration.
 ## Current real-account decision
 
 DailyPay and ColdIQ both pass provisional fit and content readiness. DailyPay
-also passes provisional paid-channel readiness after live ad and technology
-collection; ColdIQ's paid-channel readiness remains in review. Neither account
+also pass provisional paid-channel readiness after live ad and technology
+collection. Neither account
 is qualified as a channel-gap opportunity because verified gap evidence is
 absent; absence on the public web or in bounded provider results is kept as
 unknown. Review reports are stored inside each authoritative run under

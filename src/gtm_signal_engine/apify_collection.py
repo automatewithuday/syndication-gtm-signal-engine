@@ -119,12 +119,18 @@ def _write_raw(raw_dir: Path, prefix: str, body: bytes) -> tuple[str, str]:
     return str(path), digest
 
 
-def _account_search_urls(account_name: str, config: dict[str, Any]) -> dict[str, str]:
+def _account_search_urls(
+    account_name: str, config: dict[str, Any], *, linkedin_company_id: str | None = None
+) -> dict[str, str]:
     country = str(config["country"])
     date_option = str(config["date_option"])
-    linkedin_query = urllib.parse.urlencode({
-        "accountOwner": account_name, "countries": country, "dateOption": date_option,
-    })
+    linkedin_query = (
+        urllib.parse.urlencode({"companyIds": linkedin_company_id})
+        if linkedin_company_id
+        else urllib.parse.urlencode({
+            "accountOwner": account_name, "countries": country, "dateOption": date_option,
+        })
+    )
     meta_query = urllib.parse.urlencode({
         "active_status": "active", "ad_type": "all", "country": "ALL",
         "q": account_name, "search_type": str(config.get("meta_search_type", "keyword_unordered")),
@@ -211,13 +217,12 @@ def normalize_apify_linkedin(
         destination = str(record.get("clickUrl") or "")
         advertiser_name = str(record.get("advertiserName") or "")
         if (
-            not record_id or not canonicalize_url(destination)
-            or not _attributable(
+            not record_id or not _attributable(
                 advertiser_name=advertiser_name, account_name=account_name,
                 destination=destination, domain=domain,
             )
         ):
-            warnings.append(f"linkedin record {index} skipped: missing ID/destination or account attribution")
+            warnings.append(f"linkedin record {index} skipped: missing ID or account attribution")
             continue
         if record_id in seen:
             continue
@@ -228,7 +233,7 @@ def normalize_apify_linkedin(
         ]))
         observations.append(AdObservation(
             platform="linkedin", provider_record_id=record_id, creative_text=creative,
-            destination=parse_campaign_url(destination),
+            destination=parse_campaign_url(destination) if canonicalize_url(destination) else None,
             source_url=str(record.get("adLibraryUrl") or f"https://www.linkedin.com/ad-library/detail/{record_id}"),
             observed_at=observed_at, first_seen_at=availability.get("start"),
             last_seen_at=availability.get("end"), confidence=0.9,
@@ -250,13 +255,12 @@ def normalize_apify_meta(
         snapshot = record.get("snapshot") if isinstance(record.get("snapshot"), dict) else {}
         advertiser_name = str(record.get("pageName") or snapshot.get("pageName") or "")
         if (
-            not record_id or not destination
-            or not _attributable(
+            not record_id or not _attributable(
                 advertiser_name=advertiser_name, account_name=account_name,
                 destination=destination, domain=domain,
             )
         ):
-            warnings.append(f"meta record {index} skipped: missing ID/destination or account attribution")
+            warnings.append(f"meta record {index} skipped: missing ID or account attribution")
             continue
         if record_id in seen:
             continue
@@ -269,7 +273,7 @@ def normalize_apify_meta(
         ]))
         observations.append(AdObservation(
             platform="meta", provider_record_id=record_id, creative_text=creative,
-            destination=parse_campaign_url(destination),
+            destination=parse_campaign_url(destination) if destination else None,
             source_url=f"https://www.facebook.com/ads/library/?id={record_id}",
             observed_at=observed_at,
             first_seen_at=_timestamp(record.get("startDateFormatted") or record.get("startDate")),
@@ -363,6 +367,7 @@ def collect_apify_ads(
     domain: str,
     *,
     account_name: str,
+    linkedin_company_id: str | None = None,
     config_path: Path | None = None,
     platforms: tuple[str, ...] = ("linkedin", "meta"),
     vault: SecretVault | None = None,
@@ -371,6 +376,8 @@ def collect_apify_ads(
     domain = _domain(domain)
     if not account_name.strip():
         raise ValueError("account name is required")
+    if linkedin_company_id is not None and not linkedin_company_id.isdigit():
+        raise ValueError("LinkedIn company ID must contain digits only")
     if not platforms or set(platforms).difference({"linkedin", "meta"}):
         raise ValueError("platforms must contain linkedin, meta, or both")
     _validate_run_domain(run_dir, domain)
@@ -420,7 +427,9 @@ def collect_apify_ads(
             provider="apify_ads", query=domain, incomplete=True, warnings=list(status["warnings"]),
         )
     transport = transport or UrllibApifyTransport()
-    search_urls = _account_search_urls(account_name.strip(), config)
+    search_urls = _account_search_urls(
+        account_name.strip(), config, linkedin_company_id=linkedin_company_id
+    )
     observations: list[AdObservation] = []
     for platform in selected_platforms:
         try:
@@ -444,6 +453,11 @@ def collect_apify_ads(
                 **platform_status, "raw_records": len(records), "normalized_records": len(normalized),
                 "candidate_records": candidate_records,
                 "search_url": search_urls[platform], "warnings": warnings,
+                "search_identity": (
+                    {"type": "linkedin_company_id", "value": linkedin_company_id}
+                    if platform == "linkedin" and linkedin_company_id
+                    else {"type": "account_name", "value": account_name.strip()}
+                ),
             }
             status["warnings"].extend(warnings)
         except Exception as exc:

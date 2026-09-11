@@ -186,6 +186,19 @@ class ApifyCollectionTests(unittest.TestCase):
         self.assertEqual([], observations)
         self.assertEqual([], warnings)
 
+    def test_exact_advertiser_ad_is_retained_without_destination(self):
+        records = [{
+            "adId": "li-no-destination", "advertiserName": "Example",
+            "headline": "A verified active ad",
+        }]
+        observations, warnings = normalize_apify_linkedin(
+            records, domain="example.com", account_name="Example",
+            observed_at="2026-09-11T00:00:00+00:00",
+        )
+        self.assertEqual([], warnings)
+        self.assertEqual("li-no-destination", observations[0].provider_record_id)
+        self.assertIsNone(observations[0].destination)
+
     def test_paid_start_is_not_retried_after_failure(self):
         responses = [
             response({"isPublic": True, "isDeprecated": False}),
@@ -201,6 +214,46 @@ class ApifyCollectionTests(unittest.TestCase):
             )
             self.assertTrue(result.incomplete)
             self.assertEqual(2, len([item for item in transport.requests if item["method"] == "POST"]))
+
+    def test_linkedin_company_id_targets_authoritative_library_identity(self):
+        linked = json.loads((ROOT / "tests/fixtures/providers/apify_linkedin_raw.json").read_text())
+        responses = [
+            response({"isPublic": True, "isDeprecated": False}),
+            response({"id": "run-li", "status": "READY"}),
+            response({"id": "run-li", "status": "SUCCEEDED", "defaultDatasetId": "ds-li"}),
+            (200, linked),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            run_dir = self._run_dir(Path(temporary))
+            transport = FakeTransport(responses)
+            result = collect_apify_ads(
+                run_dir, "example.com", account_name="Example",
+                linkedin_company_id="65826193", platforms=("linkedin",),
+                vault=FakeVault(), transport=transport,
+            )
+            self.assertFalse(result.incomplete)
+            post = next(item for item in transport.requests if item["method"] == "POST")
+            payload = json.loads(post["body"])
+            self.assertEqual(
+                "https://www.linkedin.com/ad-library/search?companyIds=65826193",
+                payload["startUrls"][0]["url"],
+            )
+            status = json.loads((run_dir / "normalized/apify_collection.json").read_text())
+            self.assertEqual(
+                {"type": "linkedin_company_id", "value": "65826193"},
+                status["platforms"]["linkedin"]["search_identity"],
+            )
+
+    def test_invalid_linkedin_company_id_blocks_before_network(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            transport = FakeTransport([])
+            with self.assertRaisesRegex(ValueError, "digits only"):
+                collect_apify_ads(
+                    self._run_dir(Path(temporary)), "example.com", account_name="Example",
+                    linkedin_company_id="not-a-number", platforms=("linkedin",),
+                    vault=FakeVault(), transport=transport,
+                )
+            self.assertEqual([], transport.requests)
 
 
 if __name__ == "__main__":

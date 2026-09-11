@@ -554,11 +554,26 @@ coverage rather than raw page count.
 - ColdIQ exposed a second documented actor shape: a zero-result envelope with a
   nested `results` list. The normalizer now flattens envelopes and treats an
   empty completed envelope as zero candidates, not a malformed ad warning.
-- DailyPay now has six attributable ads across LinkedIn and Meta. Its
-  retargeting/programmatic readiness scores are 80/80, while both gaps remain
-  unknown. ColdIQ produced no attributable ads in this bounded run; its scores
-  remain 55/40 and review-only, with gaps unknown. Provider absence never became
-  a claim that a channel is unused.
-- Total live Apify validation usage was $0.15005 for DailyPay and $0.00005 for
-  ColdIQ. The complete fixture-only suite passes 112 tests, and package builds
+- DailyPay initially had six attributable ads with captured destinations across
+  LinkedIn and Meta. Its retargeting/programmatic readiness scores were 80/80,
+  while both gaps remained unknown. ColdIQ's name search produced no
+  attributable ads in that bounded run; provider absence did not become a claim
+  that a channel was unused.
+
+### 2026-09-11 — LinkedIn company identity and destination-optional ads
+
+- The user supplied ColdIQ's LinkedIn Ad Library URL with company ID `65826193`,
+  proving the prior account-name query was a false negative. A company-ID run
+  returned 25 ColdIQ records. Prefer verified platform entity IDs over names and
+  persist the identity strategy and value beside the search URL.
+- Thirteen ColdIQ records and only four of 25 DailyPay LinkedIn records contained
+  click destinations. Missing destinations do not invalidate exact-advertiser ad
+  activity. The normalized model now permits a null destination; such ads count
+  toward activity and platform diversity but never tracking metrics.
+- Free replay retained 25 ColdIQ LinkedIn ads and 29 DailyPay ads (25 LinkedIn,
+  four Meta) without new provider calls. ColdIQ readiness moved from 55/40 review
+  to 80 retargeting and 70 programmatic, both provisional-pass. Gap evidence for
+  both companies remains unknown.
+- Live Apify validation usage totals $0.15005 for DailyPay and $0.08810 for
+  ColdIQ. The complete deterministic suite passes 116 tests, and package builds
   include both the replayable v1 and current v2 configurations.
