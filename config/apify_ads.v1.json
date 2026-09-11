@@ -1,0 +1,23 @@
+{
+  "version": "apify_ads_v1",
+  "country": "US",
+  "date_option": "last-30-days",
+  "results_limit": 25,
+  "actor_timeout_seconds": 180,
+  "poll_wait_seconds": 60,
+  "maximum_polls": 4,
+  "actors": {
+    "linkedin": {
+      "actor_id": "silva95gustavo~linkedin-ad-library-scraper",
+      "build": "1.1.52",
+      "max_total_charge_usd": 0.15,
+      "store_url": "https://apify.com/silva95gustavo/linkedin-ad-library-scraper"
+    },
+    "meta": {
+      "actor_id": "apify~facebook-ads-scraper",
+      "build": "0.0.374",
+      "max_total_charge_usd": 0.15,
+      "store_url": "https://apify.com/apify/facebook-ads-scraper"
+    }
+  }
+}

@@ -20,12 +20,12 @@ Version 1 is a complete local review release. It includes:
 - Configurable opportunity scoring
 - A CLI and example input that run without paid APIs
 - Scrapling-only live website collection with bounded, resumable crawls
-- A live Deepline CLI/BuiltWith technology collector plus provider-neutral
-  recorded adapters for Apify advertising and Scrapling search observations
+- Live Deepline CLI/BuiltWith and guarded Apify advertising collectors, plus a
+  provider-neutral recorded Scrapling search adapter
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 103-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 108-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -256,6 +256,26 @@ The normalized profile preserves observed and canonical campaign URLs, UTM and
 click identifiers, source provenance, confidence, and technology-detection
 limitations. Without approved positive gap evidence, paid-channel gap scores
 remain unknown.
+
+Collect LinkedIn and Meta ad-library observations after storing a scoped Apify
+token in macOS Keychain Access. Use account `provider-secrets` and service
+`gtm-signal-engine:apify-token`; do not place the token in a tracked file or a
+shell command.
+
+```bash
+uv run gtm-signals collect-apify-ads \
+  data/runs/<run-id> example.com --account-name "Example"
+```
+
+The versioned default uses
+[`silva95gustavo/linkedin-ad-library-scraper`](https://apify.com/silva95gustavo/linkedin-ad-library-scraper)
+for LinkedIn and Apify's maintained
+[`apify/facebook-ads-scraper`](https://apify.com/apify/facebook-ads-scraper)
+for Meta. Actor builds, result limits, timeouts, and per-run dollar caps are
+pinned in `config/apify_ads.v1.json`. Paid starts are never automatically
+retried. Only ads with a destination attributable to the account domain enter
+the normalized profile; unmatched name-search results remain raw and generate
+warnings rather than evidence.
 
 Run local batches and resume jobs through SQLite:
 

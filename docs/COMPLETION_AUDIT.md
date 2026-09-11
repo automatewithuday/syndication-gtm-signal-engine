@@ -41,7 +41,7 @@ decision. Ambiguous cases remain unknown when no semantic provider is configured
 | Requirement | Evidence | Result |
 | --- | --- | --- |
 | Deepline normalization | recorded enrichment adapter and technology fixture | Pass |
-| Apify Meta/LinkedIn ad normalization | recorded advertising adapter and both platform fixtures | Pass |
+| Apify Meta/LinkedIn ad collection | guarded live adapter, pinned actor builds, vault boundary, and both platform fixtures | Blocked on local token for live canary |
 | Observed/canonical URLs plus UTM/click IDs | `CampaignUrl` and parser tests | Pass |
 | Campaign/SERP pages missed by crawl | recorded Scrapling SERP adapter | Pass |
 | Technology source and limits | `TechnologyObservation` | Pass |

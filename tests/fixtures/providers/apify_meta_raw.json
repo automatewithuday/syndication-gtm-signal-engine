@@ -1,0 +1,19 @@
+[
+  {
+    "adArchiveID": "meta-456",
+    "pageName": "Example",
+    "startDateFormatted": "2026-09-02T00:00:00.000Z",
+    "endDateFormatted": null,
+    "snapshot": {
+      "title": "Operations benchmark",
+      "body": {"text": "See the operations benchmark"},
+      "cards": [
+        {"linkUrl": "https://example.com/reports/benchmark?utm_source=facebook&fbclid=click-2"}
+      ]
+    }
+  },
+  {
+    "adArchiveID": "meta-other",
+    "snapshot": {"linkUrl": "https://unrelated.example/offer"}
+  }
+]

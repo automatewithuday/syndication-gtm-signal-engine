@@ -506,3 +506,32 @@ coverage rather than raw page count.
   `docs/validation/2026-09-11-live-deepline-builtwith.md`.
 - The complete fixture-only suite passed 103/103 after the live adapter and v2
   scoring boundary were added.
+
+### 2026-09-11 — Apify actor selection and guarded live boundary
+
+- Used the approved Scrapling-only research path after Parallel remained
+  unavailable. Apify's public Store and API metadata were fetched through the
+  project's pinned Scrapling dependency; no alternate scraper was introduced.
+- Selected Apify's maintained `apify/facebook-ads-scraper` for Meta. At review
+  time it had 35K+ total users, 5K+ monthly users, a current official build, and
+  documented page/search URL input plus result limits and active-ad filters.
+- Selected `silva95gustavo/linkedin-ad-library-scraper` for LinkedIn. It was the
+  most established relevant Store result observed, with 3K+ total users, a 5.0
+  rating across eight reviews, and over 118K successful public runs in the
+  trailing 30-day stats. Its documented output includes ad ID, advertiser,
+  active dates, copy, headline, click destination, and impressions.
+- Pinned the observed builds (`0.0.374` for Meta and `1.1.52` for LinkedIn) in
+  `apify_ads_v1`. Each actor is limited to 25 dataset items and a $0.15 maximum
+  charge, with a 180-second actor timeout. The run starts asynchronously so the
+  provider run ID is captured before waiting.
+- Bearer credentials are read from macOS Keychain and never added to URLs,
+  status files, or raw payloads. Paid POST requests have no automatic retry;
+  polling and dataset reads are safe GET operations.
+- Account-name search can return similarly named advertisers. The normalizer
+  therefore requires an ad ID and a landing destination on the exact account
+  domain or one of its subdomains. Unattributable records stay in ignored raw
+  data and produce warnings instead of entering scoring.
+- Live DailyPay and ColdIQ commands now create an explicit `blocked` collection
+  state because `gtm-signal-engine:apify-token` is absent from the configured
+  Keychain. No actor was started and no Apify cost was incurred. Validation is
+  recorded in `docs/validation/2026-09-11-apify-actor-selection.md`.

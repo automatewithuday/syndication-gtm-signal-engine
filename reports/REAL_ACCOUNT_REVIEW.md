@@ -74,3 +74,8 @@ readiness and 40 for programmatic readiness. These are review results, not
 qualified opportunities: no normalized LinkedIn/Meta ad-library observations
 exist yet, and neither account has approved positive gap evidence. Both paid
 channel gap scores therefore remain unknown rather than zero.
+
+The live Apify collector and selected LinkedIn/Meta actors are now implemented,
+but the two-account canary stopped before network execution because the scoped
+Apify token is not yet stored in the project Keychain vault. No ad records or
+costs were created, so the readiness values above remain unchanged.

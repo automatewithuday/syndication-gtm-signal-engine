@@ -63,6 +63,22 @@ class CliTests(unittest.TestCase):
         self.assertEqual(Path("data/runs/test"), mocked.call_args.args[0])
         self.assertEqual("example.com", mocked.call_args.args[1])
 
+    def test_apify_arguments_reach_live_collector(self):
+        result = SimpleNamespace(
+            provider="apify_ads", records=[], raw_payload_location=None,
+            incomplete=False, warnings=[],
+        )
+        with patch.object(cli, "collect_apify_ads", return_value=result) as mocked, \
+             patch("builtins.print"):
+            exit_code = cli.main([
+                "collect-apify-ads", "data/runs/test", "example.com",
+                "--account-name", "Example",
+            ])
+        self.assertEqual(0, exit_code)
+        self.assertEqual(Path("data/runs/test"), mocked.call_args.args[0])
+        self.assertEqual("example.com", mocked.call_args.args[1])
+        self.assertEqual("Example", mocked.call_args.kwargs["account_name"])
+
 
 if __name__ == "__main__":
     unittest.main()

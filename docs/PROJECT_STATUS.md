@@ -35,9 +35,13 @@ BuiltWith provider for DailyPay and ColdIQ. It inspects the provider contract
 before execution, keeps authentication outside the application, disables PII
 and company metadata, retains the raw response and billing metadata, binds the
 domain to the exact Scrapling run, and records failures as incomplete. The
-resulting technology signals feed versioned `paid_channels_v2` scoring. Apify
-remains at the recorded-adapter stage; LinkedIn and Meta actor selection and
-live ad collection are the next milestone. Until those observations exist,
+resulting technology signals feed versioned `paid_channels_v2` scoring.
+
+The Apify live boundary is implemented and fixture-tested with pinned LinkedIn
+and Meta actor builds, asynchronous run IDs, bounded polling, explicit item and
+dollar caps, Keychain-only bearer authentication, immutable raw payloads, and
+domain-attributable destination filtering. Live collection is blocked only by
+the missing `apify-token` Keychain entry. Until real ad observations exist,
 paid-channel readiness remains review-only and gap remains unknown.
 
 ## Phase 3 — Persistence and orchestration
