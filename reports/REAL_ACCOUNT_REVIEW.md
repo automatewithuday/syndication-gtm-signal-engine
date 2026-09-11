@@ -60,6 +60,17 @@ first-party discovery—an authorized internal interview, campaign-performance
 data, CRM notes, or a reviewed statement documenting distribution expansion or
 underperformance. More absence-oriented public crawling cannot close this gap.
 
-Retargeting and programmatic scoring infrastructure is implemented, but no
-real score is asserted for either account until normalized ad-library and
-technology observations are supplied through approved provider access.
+## Paid-channel technographics
+
+Live Deepline/BuiltWith observations are now available. DailyPay has 442 total
+technology detections, of which 37 are retargeting-relevant and 30 are
+programmatic-relevant. ColdIQ has 130 total detections, with 18 and 11 relevant
+respectively. Examples include Google Remarketing, Facebook Pixel and Custom
+Audiences, conversion tracking, and DoubleClick; DailyPay also shows LinkedIn
+Insights, 6sense, StackAdapt, Marketo, and Bizible.
+
+Under provisional `paid_channels_v2`, both accounts score 55 for retargeting
+readiness and 40 for programmatic readiness. These are review results, not
+qualified opportunities: no normalized LinkedIn/Meta ad-library observations
+exist yet, and neither account has approved positive gap evidence. Both paid
+channel gap scores therefore remain unknown rather than zero.

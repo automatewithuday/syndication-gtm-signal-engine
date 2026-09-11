@@ -45,7 +45,7 @@ decision. Ambiguous cases remain unknown when no semantic provider is configured
 | Observed/canonical URLs plus UTM/click IDs | `CampaignUrl` and parser tests | Pass |
 | Campaign/SERP pages missed by crawl | recorded Scrapling SERP adapter | Pass |
 | Technology source and limits | `TechnologyObservation` | Pass |
-| Retargeting/programmatic readiness and gap | `paid_channel_scoring.py`, packaged v1 config | Pass |
+| Retargeting/programmatic readiness and gap | `paid_channel_scoring.py`, packaged v1 replay and v2 default configs | Pass |
 
 Adapters are replay/fixture ready. Live actor/endpoint configuration is pending
 the later vault-credential milestone; no unsupported real score is fabricated.

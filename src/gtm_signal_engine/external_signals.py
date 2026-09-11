@@ -47,6 +47,8 @@ class TechnologyObservation:
     confidence: float
     method: str
     limitations: list[str]
+    first_seen_at: str | None = None
+    last_seen_at: str | None = None
     normalizer_version: str = EXTERNAL_NORMALIZER_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -111,7 +113,7 @@ def normalize_apify_ads(payload: list[dict[str, Any]], *, observed_at: str) -> l
 
 
 def normalize_deepline_technologies(
-    payload: dict[str, Any], *, observed_at: str
+    payload: dict[str, Any], *, observed_at: str, method: str = "deepline_recorded_payload"
 ) -> list[TechnologyObservation]:
     """Normalize recorded technology detections with explicit limitations."""
     records = payload.get("technologies", [])
@@ -129,7 +131,7 @@ def normalize_deepline_technologies(
             excerpt=str(record.get("evidence") or record.get("excerpt") or ""),
             observed_at=observed_at,
             confidence=float(record.get("confidence", 0.7)),
-            method="deepline_recorded_payload",
+            method=method,
             limitations=list(record.get("limitations") or [
                 "technology detection shows observable implementation evidence, not complete deployment or active use"
             ]),

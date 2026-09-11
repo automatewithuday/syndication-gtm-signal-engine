@@ -49,6 +49,20 @@ class CliTests(unittest.TestCase):
             cli.main(["score-trigger", "run", "profile.json", "--as-of", "2026-09-11"])
         self.assertEqual(date(2026, 9, 11), mocked.call_args.kwargs["as_of"])
 
+    def test_deepline_arguments_reach_live_collector(self):
+        result = SimpleNamespace(
+            provider="deepline", records=[], raw_payload_location="raw/deepline.json",
+            incomplete=False, warnings=[],
+        )
+        with patch.object(cli, "collect_deepline_technologies", return_value=result) as mocked, \
+             patch("builtins.print"):
+            exit_code = cli.main([
+                "collect-deepline", "data/runs/test", "example.com"
+            ])
+        self.assertEqual(0, exit_code)
+        self.assertEqual(Path("data/runs/test"), mocked.call_args.args[0])
+        self.assertEqual("example.com", mocked.call_args.args[1])
+
 
 if __name__ == "__main__":
     unittest.main()

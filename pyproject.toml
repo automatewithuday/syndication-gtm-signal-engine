@@ -32,4 +32,5 @@ gtm_signal_engine = ["migrations/*.sql"]
     "config/content_syndication_scoring.v1.json",
     "config/content_syndication_scoring.v2.json",
     "config/paid_channel_scoring.v1.json",
+    "config/paid_channel_scoring.v2.json",
 ]

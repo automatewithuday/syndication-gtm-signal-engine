@@ -467,3 +467,42 @@ coverage rather than raw page count.
 - Built and installed the wheel in a clean temporary environment. The installed
   CLI, five migrations, and all three packaged score configurations were present.
 - Complete suite after the audit: 95 tests passed.
+
+### 2026-09-11 — Live Deepline collection boundary
+
+- Began live external-signal activation with the smallest provider increment:
+  Deepline/BuiltWith technology observations only. Apify actors remain the next
+  milestone.
+- Parallel documentation search was blocked by insufficient account credit.
+  Scrapling was used for the public documentation fallback. The user then
+  supplied Deepline's official Codex surface, which established the supported
+  native CLI workflow and removed the need to guess a direct HTTP contract.
+- Installed and authenticated the official Deepline CLI, verified provider
+  health and balance with `preflight`, inspected the live
+  `builtwith_domain_lookup` schema, and used the free BuiltWith lookup as a
+  zero-cost canary before paid enrichment.
+- Replaced the provisional generic transport with a narrow native-CLI runner.
+  The Python application passes no secret, invokes commands without a shell,
+  binds the domain to the exact Scrapling run, requests live-only results with
+  PII and company metadata disabled, and stops on contract drift before making
+  a paid call.
+- Paid executions are deliberately single-attempt. An ambiguous timeout is not
+  automatically retried because that can create duplicate spend. Success stores
+  the immutable provider envelope, normalized observations, tool contract,
+  billing, provider job ID, and content hashes; failure is explicit and never
+  converted into negative evidence.
+- DailyPay returned 442 normalized technology observations and ColdIQ returned
+  130. Each lookup cost 0.14 Deepline credits ($0.014). Both showed observable
+  retargeting/conversion infrastructure, so any claim that they do not use
+  retargeting would be contradicted by the collected evidence.
+- Real data exposed a scoring flaw: the v1 implementation treated every
+  technology, including CDN and DNS products, as paid-channel evidence. Kept v1
+  intact for replay and added `paid_channels_v2`, which selects technology by
+  channel-relevant categories. DailyPay now has 37 retargeting-relevant and 30
+  programmatic-relevant detections; ColdIQ has 18 and 11 respectively.
+- Both accounts score 55 retargeting readiness and 40 programmatic readiness,
+  with review status. No live ad-library records exist yet, and both gap scores
+  correctly remain null/unknown. Validation details are recorded in
+  `docs/validation/2026-09-11-live-deepline-builtwith.md`.
+- The complete fixture-only suite passed 103/103 after the live adapter and v2
+  scoring boundary were added.

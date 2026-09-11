@@ -1,0 +1,55 @@
+{
+  "version": "paid_channels_v2",
+  "readiness": {
+    "retargeting": {
+      "ad_activity": 25,
+      "tracked_destinations": 20,
+      "observable_technology": 25,
+      "content_inventory": 30
+    },
+    "programmatic": {
+      "ad_activity": 20,
+      "platform_diversity": 20,
+      "tracked_destinations": 20,
+      "observable_technology": 20,
+      "content_diversity": 20
+    }
+  },
+  "technology_category_markers": {
+    "retargeting": [
+      "advertiser tracking",
+      "conversion tracking",
+      "retargeting",
+      "remarketing",
+      "audience targeting",
+      "tag management",
+      "tag_management",
+      "customer data platform",
+      "data management platform",
+      "identity resolution",
+      "marketing automation"
+    ],
+    "programmatic": [
+      "ad network",
+      "ad server",
+      "demand-side platform",
+      "ad exchange",
+      "programmatic advertising",
+      "contextual advertising",
+      "advertiser tracking",
+      "conversion tracking",
+      "audience targeting",
+      "customer data platform",
+      "data management platform",
+      "identity resolution"
+    ]
+  },
+  "qualification": {
+    "minimum_readiness": 65,
+    "minimum_confidence": 0.6
+  },
+  "calibration": {
+    "status": "provisional",
+    "note": "Real-company technographics observed; advertising activity remains pending Apify calibration."
+  }
+}

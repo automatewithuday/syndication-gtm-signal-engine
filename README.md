@@ -20,12 +20,12 @@ Version 1 is a complete local review release. It includes:
 - Configurable opportunity scoring
 - A CLI and example input that run without paid APIs
 - Scrapling-only live website collection with bounded, resumable crawls
-- Provider-neutral recorded adapters for Apify advertising, Deepline technology,
-  and Scrapling search observations
+- A live Deepline CLI/BuiltWith technology collector plus provider-neutral
+  recorded adapters for Apify advertising and Scrapling search observations
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 95-test suite covering classification, scoring, persistence, workflow, and
+- A 103-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -227,10 +227,29 @@ re-ingestion. Approvals bind to the exact run and page content hash reviewed.
 Export verifies the resulting profile against the saved Scrapling pages before
 writing `normalized/reviewed_gap_profile.json`.
 
-Score recorded external ad/technology observations for paid channels:
+Collect live Deepline/BuiltWith technology observations after a Scrapling run:
 
 ```bash
-uv run gtm-signals score-paid-channels data/runs/<run-id> external-profile.json
+npm install -g deepline@latest
+deepline setup --json  # only when the CLI is not already authenticated
+deepline preflight --json
+uv run gtm-signals collect-deepline data/runs/<run-id> example.com
+```
+
+The integration uses Deepline's authenticated native CLI, so Deepline credentials
+never enter the Python process or run artifacts. Before the paid lookup, the
+collector inspects the current `builtwith_domain_lookup` contract and validates
+its required input/output fields. It requests live technology data with PII and
+company metadata disabled, makes one paid attempt without ambiguous automatic
+retries, writes the immutable response under `raw/`, updates
+`normalized/external_profile.json`, and records cost and explicit incomplete
+failure state in `normalized/deepline_collection.json`.
+
+Score normalized external ad/technology observations for paid channels:
+
+```bash
+uv run gtm-signals score-paid-channels \
+  data/runs/<run-id> data/runs/<run-id>/normalized/external_profile.json
 ```
 
 The normalized profile preserves observed and canonical campaign URLs, UTM and

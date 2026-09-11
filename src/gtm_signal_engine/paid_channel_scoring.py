@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "paid_channel_scoring.v1.json"
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "paid_channel_scoring.v2.json"
 
 
 def _sha256(value: bytes) -> str:
@@ -16,9 +16,9 @@ def _sha256(value: bytes) -> str:
 
 def _default_config() -> Path:
     candidates = (
-        Path.cwd() / "config" / "paid_channel_scoring.v1.json",
+        Path.cwd() / "config" / "paid_channel_scoring.v2.json",
         DEFAULT_CONFIG_PATH,
-        Path(sys.prefix) / "share" / "gtm-signal-engine" / "paid_channel_scoring.v1.json",
+        Path(sys.prefix) / "share" / "gtm-signal-engine" / "paid_channel_scoring.v2.json",
     )
     return next((candidate for candidate in candidates if candidate.exists()), candidates[0])
 
@@ -83,6 +83,7 @@ def score_paid_channels(
     for channel, weights in config.get("readiness", {}).items():
         if sum(float(value) for value in weights.values()) != 100:
             raise ValueError(f"{channel} readiness weights must sum to 100")
+    category_markers = config.get("technology_category_markers", {})
     ads = profile.get("ads", [])
     technologies = profile.get("technologies", [])
     platforms = {str(ad["platform"]).lower() for ad in ads}
@@ -93,15 +94,24 @@ def score_paid_channels(
     tech = [item for item in technologies if item.get("state") == "detected"]
     substantial = int(asset_summary.get("substantial", {}).get("yes", 0))
     asset_types = len(asset_summary.get("asset_types", {}))
-    confidence_inputs = [float(item["confidence"]) for item in [*ads, *tech]]
-    external_confidence = round(sum(confidence_inputs) / len(confidence_inputs), 3) if confidence_inputs else 0.0
     components: dict[str, Any] = {}
+    relevant_technology_counts: dict[str, int] = {}
     for channel in ("retargeting", "programmatic"):
         weights = config["readiness"][channel]
+        markers = [str(marker).casefold() for marker in category_markers.get(channel, [])]
+        relevant_tech = [
+            item for item in tech
+            if not markers or any(marker in str(item.get("category", "")).casefold() for marker in markers)
+        ]
+        relevant_technology_counts[channel] = len(relevant_tech)
+        confidence_inputs = [float(item["confidence"]) for item in [*ads, *relevant_tech]]
+        external_confidence = (
+            round(sum(confidence_inputs) / len(confidence_inputs), 3) if confidence_inputs else 0.0
+        )
         metrics = {
             "ad_activity": len(ads),
             "tracked_destinations": len(tracked),
-            "observable_technology": len(tech),
+            "observable_technology": len(relevant_tech),
             "content_inventory": substantial,
             "platform_diversity": len(platforms),
             "content_diversity": asset_types,
@@ -147,7 +157,8 @@ def score_paid_channels(
         }
     return {"channels": components, "metrics": {
         "ads": len(ads), "platforms": sorted(platforms), "tracked_destinations": len(tracked),
-        "technology_detections": len(tech), "substantial_assets": substantial, "asset_types": asset_types,
+        "technology_detections": len(tech), "relevant_technology_detections": relevant_technology_counts,
+        "substantial_assets": substantial, "asset_types": asset_types,
     }}
 
 

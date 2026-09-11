@@ -31,6 +31,7 @@ from .trigger_scoring import score_business_trigger_run
 from .review_report import build_account_review
 from .workflow import crawl_and_analyze
 from .paid_channel_scoring import score_paid_channel_run
+from .external_collection import collect_deepline_technologies
 from .jobs import enqueue_batch, list_jobs, run_job, run_pending_jobs
 from .validation import (
     create_outreach_snapshot,
@@ -136,6 +137,11 @@ def build_parser() -> argparse.ArgumentParser:
     paid.add_argument("run_dir", type=Path)
     paid.add_argument("profile", type=Path)
     paid.add_argument("--config", type=Path)
+    deepline = subparsers.add_parser(
+        "collect-deepline", help="Collect live Deepline/BuiltWith technology observations"
+    )
+    deepline.add_argument("run_dir", type=Path)
+    deepline.add_argument("domain")
     enqueue = subparsers.add_parser("enqueue-batch", help="Idempotently enqueue CSV/JSONL account jobs")
     enqueue.add_argument("input", type=Path)
     enqueue.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
@@ -321,6 +327,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = score_paid_channel_run(args.run_dir, args.profile, args.config)
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
+    if args.command == "collect-deepline":
+        result = collect_deepline_technologies(args.run_dir, args.domain)
+        print(json.dumps({
+            "provider": result.provider,
+            "records": len(result.records),
+            "raw_payload_location": result.raw_payload_location,
+            "incomplete": result.incomplete,
+            "warnings": result.warnings,
+        }, indent=2, sort_keys=True))
+        return 1 if result.incomplete else 0
     if args.command == "enqueue-batch":
         result = enqueue_batch(args.input, args.database)
         print(json.dumps(result, indent=2, sort_keys=True))
