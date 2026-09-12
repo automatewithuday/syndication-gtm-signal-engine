@@ -17,6 +17,61 @@ def _write(path: Path, value):
 
 
 class AccountPipelineTests(unittest.TestCase):
+    def test_company_enrichment_runs_first_and_supplies_downstream_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir = root / "run"
+            calls = []
+            _write(run_dir / "manifest.json", {
+                "run_id": "run", "seed_url": "https://example.com/",
+                "provider": "ScraplingFetcher", "status": "completed", "fetched_pages": 1,
+            })
+            _write(run_dir / "normalized" / "asset_summary.json", {
+                "substantial": {"yes": 0}, "asset_types": {},
+            })
+            _write(run_dir / "normalized" / "deepline_collection.json", {"status": "completed"})
+            _write(run_dir / "normalized" / "adyntel_collection.json", {"platforms": {
+                key: {"status": "completed", "incomplete": False, "provider_total_records": 0}
+                for key in ("meta", "linkedin", "google")
+            }})
+            _write(run_dir / "normalized" / "external_profile.json", {
+                "schema_version": "1.0", "domain": "example.com",
+                "technologies": [], "ads": [], "gap_observations": [],
+            })
+
+            def company(domain, **kwargs):
+                calls.append(("company", domain))
+                return {
+                    "domain": domain, "name": "Canonical Example", "status": "completed",
+                    "cache_hit": True, "last_enriched_at": "2026-09-13T00:00:00Z",
+                    "identifiers": {"linkedin_company_id": "123", "linkedin_url": "https://linkedin.com/company/example"},
+                    "firmographics": {"employee_count": 50},
+                    "funding": {"status": "completed", "required_provider": "crunchbase_via_deepline"},
+                    "downstream_keys": {"linkedin_jobs": "123"}, "current_run_billing": [],
+                }
+
+            def jobs(saved, domain, **kwargs):
+                calls.append(("jobs", kwargs["linkedin_company_id"], kwargs["account_name"]))
+                _write(saved / "normalized" / "job_collection.json", {
+                    "status": "completed", "normalized_records": 0, "sources": {},
+                })
+                (saved / "normalized" / "job_postings.jsonl").write_text("")
+                return SimpleNamespace(incomplete=False, records=[], warnings=[])
+
+            result = run_account_v1(
+                "example.com", account_name="Input Example", run_dir=run_dir,
+                company_enricher=company, jobs_collector=jobs,
+            )
+            self.assertEqual([
+                ("company", "example.com"),
+                ("jobs", "123", "Canonical Example"),
+            ], calls)
+            self.assertEqual("completed", result["pipeline"]["status"])
+            reference = json.loads(
+                (run_dir / "normalized" / "company_enrichment.json").read_text()
+            )
+            self.assertEqual("123", reference["identifiers"]["linkedin_company_id"])
+
     def test_pipeline_runs_once_then_resumes_without_paid_calls(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

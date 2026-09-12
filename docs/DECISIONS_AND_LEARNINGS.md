@@ -812,3 +812,40 @@ coverage rather than raw page count.
   funding discovery remains corroboration only until the Crunchbase contract is
   available. An attempted provider-availability feedback submission was blocked
   by the external-data approval boundary and no session data was sent.
+
+### 2026-09-13 — Company enrichment becomes the pipeline identity gate
+
+- Company enrichment now runs before website, technology, jobs, ads, or search.
+  The normalized SQLite `accounts` row is the canonical source for company name,
+  domain, LinkedIn URL and numeric company ID, employee size, revenue range,
+  industry, headquarters, company type, founding year, Prospeo ID, Crustdata ID,
+  and Crunchbase URL.
+- Deepline's research-workflow documentation reinforced the durable contract:
+  preserve the stable input row, source URL or record ID, unresolved reason, and
+  review boundary. Raw provider payloads therefore remain in account-level files;
+  append-only database snapshots retain their paths, SHA-256 hashes, billing,
+  observation times, and normalizer version.
+- Prospeo is the primary mechanical firmographic source. If it returns a
+  LinkedIn URL without the numeric ID, the waterfall calls the free exact-domain
+  Crustdata identity tool. Downstream LinkedIn Jobs consumes the stored numeric
+  ID; Scrapling, BuiltWith, Adyntel, and Google search consume the stored domain.
+- Cache reuse is the default. Only explicit `--refresh` can repurchase Prospeo.
+  An already-saved provider response can be imported with `--prospeo-response`,
+  which was used for the ColdIQ pilot rather than repeating its lookup.
+- The real ColdIQ profile stores 44 employees, a 21-50 range, Advertising
+  Services, LinkedIn company ID `65826193`, and its Crunchbase organization URL.
+  DailyPay stores 987 employees, a 501-1000 range, Financial Services, a
+  $250M-$500M revenue range, LinkedIn company ID `10497554`, and its Crunchbase
+  organization URL.
+- The live Prospeo pilot cost 0 credits for ColdIQ because the response was
+  flagged as a free enrichment and 0.55 credits ($0.055) for DailyPay. The
+  exact-domain identity fallback is free. Subsequent account-pipeline replays
+  showed zero new company-enrichment cost because both records were cache hits.
+- DailyPay's live Prospeo result returned revenue as a `{min,max}` object. The
+  first persistence attempt rejected that value instead of coercing it. Because
+  the raw envelope had already been written, normalization was fixed and the
+  saved response was replayed without another paid request.
+- Prospeo also returned a DailyPay funding observation. It is stored as
+  non-authoritative context only; the account remains partial because the user
+  requires Crunchbase through Deepline for funding scoring and that callable
+  contract is not currently exposed.

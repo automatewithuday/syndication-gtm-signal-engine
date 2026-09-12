@@ -120,6 +120,23 @@ class CliTests(unittest.TestCase):
              patch("builtins.print"):
             cli.main(["run-account-v1", "coldiq.com", "--skip-ad-platform", "meta"])
         self.assertEqual(("meta",), mocked.call_args.kwargs["skip_ad_platforms"])
+        self.assertIs(cli.enrich_company, mocked.call_args.kwargs["company_enricher"])
+        self.assertEqual(Path("data/gtm_signal_engine.sqlite3"), mocked.call_args.kwargs["database_path"])
+
+    def test_company_enrichment_arguments_reach_cache_layer(self):
+        result = {"domain": "example.com", "status": "partial"}
+        with patch.object(cli, "enrich_company", return_value=result) as mocked, \
+             patch("builtins.print"):
+            cli.main([
+                "enrich-company", "example.com", "--account-name", "Example",
+                "--linkedin-company-id", "123", "--refresh",
+                "--database", "custom.sqlite3", "--output-dir", "company-data",
+            ])
+        self.assertEqual("example.com", mocked.call_args.args[0])
+        self.assertEqual("Example", mocked.call_args.kwargs["account_name"])
+        self.assertEqual("123", mocked.call_args.kwargs["linkedin_company_id"])
+        self.assertTrue(mocked.call_args.kwargs["refresh"])
+        self.assertEqual(Path("custom.sqlite3"), mocked.call_args.kwargs["database_path"])
 
 
 if __name__ == "__main__":

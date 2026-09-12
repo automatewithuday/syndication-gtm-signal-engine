@@ -22,6 +22,7 @@ from .paid_gap_review import (
     review_paid_gap_candidate,
 )
 from .job_collection import collect_deepline_jobs, replay_deepline_jobs
+from .company_enrichment import enrich_company, get_account
 from .review_queue import (
     DEFAULT_DATABASE_PATH,
     export_gap_profile,
@@ -130,6 +131,21 @@ def build_parser() -> argparse.ArgumentParser:
     replay_jobs.add_argument("domain")
     replay_jobs.add_argument("--account-name", required=True)
     replay_jobs.add_argument("--linkedin-company-id")
+    enrich_account = subparsers.add_parser(
+        "enrich-company", help="Enrich and cache a canonical company record before account analysis"
+    )
+    enrich_account.add_argument("domain")
+    enrich_account.add_argument("--account-name")
+    enrich_account.add_argument("--linkedin-company-id")
+    enrich_account.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    enrich_account.add_argument("--output-dir", type=Path, default=Path("data/company_enrichment"))
+    enrich_account.add_argument("--refresh", action="store_true")
+    enrich_account.add_argument("--prospeo-response", type=Path)
+    show_account = subparsers.add_parser(
+        "show-company", help="Show the cached canonical company record without provider calls"
+    )
+    show_account.add_argument("domain")
+    show_account.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
     ingest_paid_gap = subparsers.add_parser(
         "ingest-paid-gap-candidates", help="Ingest paid-channel gap candidates into SQLite"
     )
@@ -264,6 +280,8 @@ def build_parser() -> argparse.ArgumentParser:
     run_account.add_argument("--maximum-sitemaps", type=int, default=20)
     run_account.add_argument("--delay-seconds", type=float, default=0.25)
     run_account.add_argument("--linkedin-company-id")
+    run_account.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    run_account.add_argument("--refresh-company", action="store_true")
     run_account.add_argument(
         "--skip-ad-platform", action="append", choices=("meta", "linkedin", "google"),
         help="Do not collect this ad platform; the evidence state remains explicitly unassessed",
@@ -419,6 +437,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             "incomplete": result.incomplete, "warnings": result.warnings,
         }, indent=2, sort_keys=True))
         return 1 if result.incomplete else 0
+    if args.command == "enrich-company":
+        result = enrich_company(
+            args.domain, account_name=args.account_name, database_path=args.database,
+            output_root=args.output_dir, linkedin_company_id=args.linkedin_company_id,
+            refresh=args.refresh, prospeo_response_path=args.prospeo_response,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    if args.command == "show-company":
+        result = get_account(args.domain, args.database)
+        if result is None:
+            print(json.dumps({"domain": args.domain, "status": "not_enriched"}, indent=2, sort_keys=True))
+            return 1
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
     if args.command == "ingest-paid-gap-candidates":
         print(json.dumps(ingest_paid_gap_candidates(args.run_dir, args.database), indent=2, sort_keys=True))
         return 0
@@ -577,6 +610,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             apify_fallback=not args.no_apify_fallback,
             skip_ad_platforms=tuple(args.skip_ad_platform or ()),
             jobs_collector=collect_deepline_jobs,
+            company_enricher=enrich_company, database_path=args.database,
+            refresh_company=args.refresh_company,
         )
         print(json.dumps({
             "status": result["pipeline"]["status"], "run_dir": result["run"]["run_dir"],

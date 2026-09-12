@@ -14,6 +14,7 @@ from .paid_channel_scoring import score_paid_channel_run
 from .gap_discovery import discover_initiative_candidates
 from .paid_gap import discover_paid_gap_candidates
 from .job_collection import collect_deepline_jobs
+from .review_queue import DEFAULT_DATABASE_PATH
 from .workflow import analyze_saved_run, crawl_and_analyze
 
 StageCallback = Callable[[str, str, dict[str, Any]], None]
@@ -46,6 +47,9 @@ def run_account_v1(
     adyntel_collector: Collector = collect_adyntel_ads,
     apify_collector: Collector = collect_apify_ads,
     jobs_collector: Collector | None = None,
+    company_enricher: Collector | None = None,
+    database_path: Path = DEFAULT_DATABASE_PATH,
+    refresh_company: bool = False,
 ) -> dict[str, Any]:
     """Run or resume one evidence-first account workflow without rebuying completed stages."""
     invalid_skips = set(skip_ad_platforms).difference({"meta", "linkedin", "google"})
@@ -57,6 +61,17 @@ def run_account_v1(
         if platform not in skipped_platforms
     )
     callback = stage_callback or (lambda *_: None)
+    company_profile: dict[str, Any] | None = None
+    if company_enricher is not None:
+        company_profile = company_enricher(
+            domain, account_name=account_name, database_path=database_path,
+            linkedin_company_id=linkedin_company_id, refresh=refresh_company,
+        )
+        account_name = company_profile.get("name") or account_name
+        linkedin_company_id = (
+            company_profile.get("identifiers", {}).get("linkedin_company_id")
+            or linkedin_company_id
+        )
     if run_dir is None:
         temporary_report = output_root / "_pipeline_reports" / f"{domain.replace('.', '-')}.json"
         website = website_runner(
@@ -97,6 +112,34 @@ def run_account_v1(
         state["stages"][stage] = payload
         _save(state_path, state)
         callback(stage, status, payload)
+
+    if company_profile is not None:
+        company_reference = {
+            "schema_version": "1.0",
+            "domain": company_profile["domain"],
+            "name": company_profile["name"],
+            "status": company_profile["status"],
+            "cache_hit": company_profile.get("cache_hit", False),
+            "identifiers": company_profile["identifiers"],
+            "firmographics": company_profile["firmographics"],
+            "funding": company_profile["funding"],
+            "downstream_keys": company_profile["downstream_keys"],
+            "last_enriched_at": company_profile["last_enriched_at"],
+            "current_run_billing": company_profile.get("current_run_billing", []),
+        }
+        _save(run_dir / "normalized" / "company_enrichment.json", company_reference)
+        company_status = "completed" if company_profile["status"] == "completed" else "partial"
+        checkpoint("company_enrichment", company_status, {
+            "cache_hit": company_profile.get("cache_hit", False),
+            "linkedin_company_id": linkedin_company_id,
+            "funding_status": company_profile["funding"]["status"],
+        })
+        if company_status == "partial":
+            state["blockers"].append(company_profile["funding"]["interpretation"])
+    else:
+        checkpoint("company_enrichment", "skipped", {
+            "reason": "no company enricher supplied by this library caller",
+        })
 
     checkpoint("website", "completed" if website["run"].get("status") != "failed" else "partial", {"run_dir": str(run_dir)})
 

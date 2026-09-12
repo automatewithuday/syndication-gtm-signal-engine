@@ -3,6 +3,22 @@
 Status as of 2026-09-13. “Complete” means implemented and fixture-tested; it
 does not mean the provisional scoring model is calibrated for unattended use.
 
+## Phase 0 — Canonical company enrichment
+
+Implemented and live-piloted for ColdIQ and DailyPay. A domain is enriched once
+with Deepline/Prospeo and stored in the SQLite `accounts` table before website,
+technology, jobs, ads, or search collection begins. Raw provider envelopes stay
+in the account-enrichment filesystem boundary; the database retains normalized
+fields, field provenance, raw paths, hashes, provider record IDs, and billing.
+Repeated runs reuse the cached row unless an explicit refresh is requested.
+
+The canonical record supplies domain keys to Scrapling, BuiltWith, Adyntel, and
+Google search, plus the numeric LinkedIn company ID to LinkedIn Jobs. Prospeo
+returned 44 employees for ColdIQ and 987 for DailyPay; DailyPay also returned a
+$250M-$500M revenue range. Prospeo funding observations are retained only as
+non-authoritative context. Funding remains partial until a callable Crunchbase
+contract is available through Deepline.
+
 ## Phase 1 — Website intelligence MVP
 
 Complete for the user-selected Scrapling provider: bounded discovery/crawl,
@@ -154,7 +170,7 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 138 tests.
+The complete deterministic suite passes 152 tests.
 
 ## Current account-specific collection policy
 

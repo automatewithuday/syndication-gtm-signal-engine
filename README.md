@@ -20,12 +20,14 @@ Version 1 is a complete local review release. It includes:
 - Configurable opportunity scoring
 - A CLI and example input that run without paid APIs
 - Scrapling-only live website collection with bounded, resumable crawls
+- Prospeo-first company enrichment with a canonical SQLite account cache and
+  free domain-identity completion for missing LinkedIn company IDs
 - Live Deepline CLI/BuiltWith and guarded Apify advertising collectors, plus a
   provider-neutral recorded Scrapling search adapter
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 138-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 152-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -77,7 +79,23 @@ Run the complete V1 account-intelligence workflow with stage checkpoints:
 uv run gtm-signals run-account-v1 example.com --account-name Example
 ```
 
-This runs Scrapling website analysis, Deepline/BuiltWith, all three
+The first stage enriches and caches the company record. Every later run reuses
+its canonical name, domain, LinkedIn URL/ID, headcount, revenue, industry,
+location, provider IDs, and funding-source state without purchasing Prospeo
+again. Inspect or explicitly refresh the account cache with:
+
+```bash
+uv run gtm-signals enrich-company example.com --account-name Example
+uv run gtm-signals show-company example.com
+uv run gtm-signals enrich-company example.com --refresh
+```
+
+Refresh is explicit because it may make another paid Prospeo request. Raw
+provider envelopes live outside the core database and are referenced by their
+path and SHA-256 hash from append-only enrichment snapshots. The SQLite account
+row stores only the normalized company profile and field provenance.
+
+After account enrichment, the workflow runs Scrapling website analysis, Deepline/BuiltWith, all three
 Deepline/Adyntel channels, local creative analysis, `paid_channels_v3`, and a
 JSON/Markdown decision report. Resume an existing run without repurchasing
 completed or partial provider stages:

@@ -10,6 +10,7 @@ config/*.local.json
 
 # Live crawl output may contain copyrighted page content or incidental PII.
 data/runs/
+data/company_enrichment/
 data/*.sqlite3
 data/*.sqlite3-shm
 data/*.sqlite3-wal

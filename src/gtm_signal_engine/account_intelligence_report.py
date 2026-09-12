@@ -21,12 +21,34 @@ def _top(values: dict[str, Any], limit: int = 5) -> list[dict[str, Any]]:
     ]
 
 
+def _compact_usd(value: Any) -> str | None:
+    if not isinstance(value, (int, float)):
+        return None
+    for divisor, suffix in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")):
+        if abs(value) >= divisor:
+            amount = value / divisor
+            return f"${amount:g}{suffix}"
+    return f"${value:g}"
+
+
+def _revenue_display(value: Any) -> str:
+    if isinstance(value, dict):
+        minimum = _compact_usd(value.get("min"))
+        maximum = _compact_usd(value.get("max"))
+        if minimum and maximum:
+            return f"{minimum}–{maximum}"
+        return minimum or maximum or "unknown"
+    return str(value) if value not in (None, "") else "unknown"
+
+
 def _billing(run_dir: Path) -> dict[str, Any]:
+    company = _load(run_dir / "normalized" / "company_enrichment.json")
     builtwith = _load(run_dir / "normalized" / "deepline_collection.json")
     adyntel = _load(run_dir / "normalized" / "adyntel_collection.json")
     apify = _load(run_dir / "normalized" / "apify_collection.json")
     jobs = _load(run_dir / "normalized" / "job_collection.json")
     billings = [builtwith.get("usage", {}).get("billing", {})]
+    billings.extend(item.get("billing", {}) for item in company.get("current_run_billing", []))
     billings.extend(item.get("billing", {}) for item in adyntel.get("platforms", {}).values())
     billings.extend(item.get("usage", {}).get("billing", {}) for item in jobs.get("sources", {}).values())
     apify_usd = sum(
@@ -66,6 +88,7 @@ def build_account_intelligence_report(
     gap_candidates = _load(run_dir / "normalized" / "paid_gap_candidate_summary.json")
     job_collection = _load(run_dir / "normalized" / "job_collection.json")
     job_postings = _load_jsonl(run_dir / "normalized" / "job_postings.jsonl")
+    company_enrichment = _load(run_dir / "normalized" / "company_enrichment.json")
     pipeline = _load(run_dir / "normalized" / "account_pipeline.json")
     domain = (urlsplit(str(manifest.get("seed_url", ""))).hostname or profile.get("domain") or "").removeprefix("www.")
 
@@ -171,11 +194,12 @@ def build_account_intelligence_report(
                     for item in job_postings[:10]
                 ],
             },
-            "funding": {
-                "provider": "crunchbase_via_deepline",
-                "status": "not_collected" if not (run_dir / "normalized" / "funding_collection.json").is_file() else "see_funding_collection",
-            },
+            "funding": company_enrichment.get("funding", {
+                "required_provider": "crunchbase_via_deepline",
+                "status": "not_collected",
+            }),
         },
+        "company_enrichment": company_enrichment or None,
         "paid_gap_candidates": gap_candidates or None,
         "top_creatives": top_creatives,
         "blockers": list(dict.fromkeys(blockers)),
@@ -191,9 +215,26 @@ def build_account_intelligence_report(
         f"- Pipeline status: {report['pipeline']['status'] or 'unknown'}",
         f"- Captured provider cost: {report['provider_cost']['credits']} Deepline credits (${report['provider_cost']['usd']:.3f} including Apify)",
         f"- Cost capture complete: {report['provider_cost']['complete']}", "",
+    ]
+    if company_enrichment:
+        identifiers = company_enrichment.get("identifiers", {})
+        firmographics = company_enrichment.get("firmographics", {})
+        revenue = firmographics.get("revenue_range")
+        revenue_display = _revenue_display(revenue)
+        lines.extend([
+            "## Company profile", "",
+            f"- Enrichment cache hit: {company_enrichment.get('cache_hit', False)}",
+            f"- LinkedIn: {identifiers.get('linkedin_url') or 'unresolved'}",
+            f"- LinkedIn company ID: {identifiers.get('linkedin_company_id') or 'unresolved'}",
+            f"- Employees: {firmographics.get('employee_count') or 'unknown'} "
+            f"({firmographics.get('employee_range') or 'range unknown'})",
+            f"- Revenue range: {revenue_display}",
+            f"- Industry: {firmographics.get('industry') or 'unknown'}", "",
+        ])
+    lines.extend([
         "## Paid advertising", "",
         "| Channel | Adyntel | Total ads | Adyntel inspected | Fallback | Fallback inspected | Evidence state |", "|---|---:|---:|---:|---:|---:|---:|",
-    ]
+    ])
     for platform, item in platforms.items():
         lines.append(f"| {platform.title()} | {item['provider_status']} | {item['provider_total_ads'] if item['provider_total_ads'] is not None else 'unknown'} | {item['ads_inspected']} | {item['fallback_status'] or 'not used'} | {item['fallback_ads_inspected']} | {item['evidence_state']} |")
     lines.extend(["", "## Website proof", ""])
@@ -208,6 +249,11 @@ def build_account_intelligence_report(
         f"({report['business_signals']['dated_candidate_count']} with a source date)"
     )
     lines.append(f"- External demand-gen job postings: {report['business_signals']['external_job_postings']['count']}")
+    funding = report["business_signals"]["funding"]
+    lines.append(
+        f"- Funding: {funding.get('status', 'unknown')} "
+        f"(required source: {funding.get('required_provider', 'crunchbase_via_deepline')})"
+    )
     for signal_type, count in report["business_signals"]["by_signal_type"].items():
         lines.append(f"- {signal_type}: {count}")
     lines.append(f"- {report['business_signals']['interpretation']}")

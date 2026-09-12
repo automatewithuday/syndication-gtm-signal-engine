@@ -18,6 +18,15 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
 - Do not submit forms, create accounts, or launch outreach without explicit authorization.
 - Work in small milestones and validate each milestone against representative
   real public companies before broadening scope.
+- Make canonical company enrichment the first pipeline stage. Persist one
+  normalized account row keyed by canonical domain, then source every downstream
+  provider input from that record: domain for website/technology/ads/search and
+  numeric LinkedIn company ID for LinkedIn jobs. Reuse the cached record by
+  default; require an explicit refresh before repurchasing firmographics.
+- Use Prospeo through Deepline as the primary mechanical firmographic source.
+  If Prospeo returns a LinkedIn URL without its numeric ID, use a free exact-domain
+  identity resolver and persist the merged identifiers. Keep Crunchbase funding
+  as a separate required source rather than treating Prospeo funding as final.
 - Turn real observations into sanitized deterministic fixtures; unit tests must
   not depend on live websites or paid provider calls.
 - Treat scoring weights and qualification thresholds as provisional until they

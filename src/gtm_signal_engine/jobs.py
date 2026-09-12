@@ -13,6 +13,8 @@ from .collector import normalize_seed
 from .review_queue import DEFAULT_DATABASE_PATH, connect_database
 from .workflow import analyze_saved_run, crawl_and_analyze
 from .account_pipeline import run_account_v1
+from .company_enrichment import enrich_company
+from .job_collection import collect_deepline_jobs
 
 JobRunner = Callable[..., dict[str, Any]]
 
@@ -152,6 +154,8 @@ def run_job(
                 delay_seconds=request["delay_seconds"], linkedin_company_id=request.get("linkedin_company_id"),
                 apify_fallback=request.get("apify_fallback", True), stage_callback=stage_callback,
                 skip_ad_platforms=tuple(request.get("skip_ad_platforms", ())),
+                jobs_collector=collect_deepline_jobs, company_enricher=enrich_company,
+                database_path=database_path,
             )
             final_status = report["pipeline"]["status"]
             run_dir = report["run"]["run_dir"]
