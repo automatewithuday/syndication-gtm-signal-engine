@@ -37,7 +37,17 @@ and company metadata, retains the raw response and billing metadata, binds the
 domain to the exact Scrapling run, and records failures as incomplete. The
 resulting technology signals feed versioned `paid_channels_v2` scoring.
 
-The Apify live boundary is implemented, fixture-tested, and live-validated with
+The Deepline/Adyntel ads boundary is now the primary provider-neutral path for
+Meta, LinkedIn, and Google. It performs one paid call per selected channel,
+persists immutable provider envelopes and hashes, records billing/job IDs and
+provider-reported totals, and marks first-page or empty-payload results partial
+or inconclusive. Inconclusive replacement data never erases prior evidence.
+Live validation records ColdIQ totals of 214 LinkedIn and 44 Google ads, with
+24 and ten normalized first-page rows; its Meta response remains inconclusive.
+DailyPay records totals of 16 Meta, 318 LinkedIn, and 200 Google ads, with ten
+normalized first-page rows for each channel.
+
+The Apify live boundary remains implemented as a fallback and replay source with
 pinned LinkedIn and Meta actor builds, asynchronous run IDs, bounded polling,
 explicit item/dollar caps, Keychain-only bearer authentication, immutable raw
 payloads, exact account attribution, LinkedIn company-ID targeting,
@@ -80,3 +90,5 @@ is qualified as a channel-gap opportunity because verified gap evidence is
 absent; absence on the public web or in bounded provider results is kept as
 unknown. Review reports are stored inside each authoritative run under
 `normalized/account_review.{json,md}`.
+
+The complete deterministic suite passes 122 tests.

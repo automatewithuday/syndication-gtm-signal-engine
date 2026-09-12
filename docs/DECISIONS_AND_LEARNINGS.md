@@ -592,3 +592,40 @@ coverage rather than raw page count.
   are `inconclusive`, not confirmation that Meta ads are absent.
 - The audit record is stored at
   `deepline/data/coldiq-meta-ads-validation/adyntel-facebook-coldiq.json`.
+
+### 2026-09-12 — Adyntel selected as the primary three-channel ads provider
+
+- The user selected Deepline's managed Adyntel integration as the primary ads
+  source because one provider covers Meta, LinkedIn, and Google. Apify remains a
+  fallback and immutable replay source rather than being deleted.
+- Live catalog inspection confirmed `adyntel_facebook`, `adyntel_linkedin`, and
+  `adyntel_google` are connected at 0.13 credits ($0.013) per company/channel
+  call. All accept a bare company domain.
+- A ColdIQ Google pilot reported 44 total creatives and returned ten dated rows
+  with official Google Ads Transparency Center evidence URLs. A ColdIQ LinkedIn
+  domain lookup resolved page ID 65826193, reported 214 total ads, and returned
+  24 first-page rows.
+- The documented LinkedIn page-ID input is currently coerced by the Deepline CLI
+  and rejected upstream as the wrong type. The collector therefore records a
+  verified page ID as an identity hint but sends the domain until this contract
+  mismatch is fixed.
+- Provider-reported totals and returned rows are distinct. Continuation tokens
+  or totals larger than the response are persisted as partial coverage, not
+  represented as a complete count. Empty raw payloads remain inconclusive.
+- Added `collect-adyntel-ads`, a provider-neutral normalizer and guarded merge
+  policy. Successful selected platforms replace older normalized platform rows;
+  failed or inconclusive platforms preserve existing Apify evidence. Paid calls
+  are single-attempt and full envelopes, hashes, billing, and job IDs remain
+  auditable.
+- End-to-end runs confirmed the boundary on both real accounts. ColdIQ saved 24
+  LinkedIn and ten Google rows against provider totals of 214 and 44; Meta again
+  returned no payload and stayed inconclusive. DailyPay saved ten rows per
+  channel against totals of 16 Meta, 318 LinkedIn, and 200 Google ads.
+- DailyPay exposed Meta's distinct `results`/`number_of_ads` response shape. The
+  first implementation had persisted the envelope but lost its audit pointer
+  when normalization rejected the shape. The failure path now retains response
+  hashes, billing, and job IDs, and `replay-adyntel-ads` repaired the saved
+  response locally without another paid call.
+- This uses one provider relationship but still invokes three channel-native
+  tools. The two-account end-to-end collection cost 0.78 credits ($0.078), and
+  first-page truncation remains explicit. The complete suite passes 122 tests.

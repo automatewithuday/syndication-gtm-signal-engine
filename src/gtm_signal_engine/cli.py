@@ -32,6 +32,7 @@ from .review_report import build_account_review
 from .workflow import crawl_and_analyze
 from .paid_channel_scoring import score_paid_channel_run
 from .external_collection import collect_deepline_technologies
+from .adyntel_collection import collect_adyntel_ads, replay_adyntel_response
 from .apify_collection import collect_apify_ads, replay_apify_ads
 from .jobs import enqueue_batch, list_jobs, run_job, run_pending_jobs
 from .validation import (
@@ -143,8 +144,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     deepline.add_argument("run_dir", type=Path)
     deepline.add_argument("domain")
+    adyntel = subparsers.add_parser(
+        "collect-adyntel-ads", help="Collect Meta, LinkedIn, and Google ads through Deepline/Adyntel"
+    )
+    adyntel.add_argument("run_dir", type=Path)
+    adyntel.add_argument("domain")
+    adyntel.add_argument("--linkedin-page-id")
+    adyntel.add_argument("--platform", action="append", choices=("meta", "linkedin", "google"))
+    adyntel_replay = subparsers.add_parser(
+        "replay-adyntel-ads", help="Re-normalize one saved Adyntel response without a paid call"
+    )
+    adyntel_replay.add_argument("run_dir", type=Path)
+    adyntel_replay.add_argument("domain")
+    adyntel_replay.add_argument("--platform", required=True, choices=("meta", "linkedin", "google"))
+    adyntel_replay.add_argument("--response", required=True, type=Path)
     apify = subparsers.add_parser(
-        "collect-apify-ads", help="Collect live LinkedIn and Meta ad-library observations"
+        "collect-apify-ads", help="Fallback: collect LinkedIn and Meta ad-library observations with Apify"
     )
     apify.add_argument("run_dir", type=Path)
     apify.add_argument("domain")
@@ -351,6 +366,30 @@ def main(argv: Sequence[str] | None = None) -> int:
             "raw_payload_location": result.raw_payload_location,
             "incomplete": result.incomplete,
             "warnings": result.warnings,
+        }, indent=2, sort_keys=True))
+        return 1 if result.incomplete else 0
+    if args.command == "collect-adyntel-ads":
+        result = collect_adyntel_ads(
+            args.run_dir, args.domain,
+            linkedin_page_id=args.linkedin_page_id,
+            platforms=tuple(args.platform) if args.platform else ("meta", "linkedin", "google"),
+        )
+        print(json.dumps({
+            "provider": result.provider,
+            "records": len(result.records),
+            "raw_payload_location": result.raw_payload_location,
+            "incomplete": result.incomplete,
+            "warnings": result.warnings,
+        }, indent=2, sort_keys=True))
+        return 1 if result.incomplete else 0
+    if args.command == "replay-adyntel-ads":
+        result = replay_adyntel_response(
+            args.run_dir, args.domain, platform=args.platform, response_path=args.response,
+        )
+        print(json.dumps({
+            "provider": result.provider, "records": len(result.records),
+            "raw_payload_location": result.raw_payload_location,
+            "incomplete": result.incomplete, "warnings": result.warnings,
         }, indent=2, sort_keys=True))
         return 1 if result.incomplete else 0
     if args.command == "collect-apify-ads":

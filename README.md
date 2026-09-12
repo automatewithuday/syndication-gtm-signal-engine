@@ -257,7 +257,38 @@ click identifiers, source provenance, confidence, and technology-detection
 limitations. Without approved positive gap evidence, paid-channel gap scores
 remain unknown.
 
-Collect LinkedIn and Meta ad-library observations after storing a scoped Apify
+Collect all three paid-ad channels through Deepline's managed Adyntel tools:
+
+```bash
+uv run gtm-signals collect-adyntel-ads \
+  data/runs/<run-id> example.com
+```
+
+Adyntel is the primary live ads provider. The collector inspects each live tool
+contract, then makes exactly one paid request per selected platform (`meta`,
+`linkedin`, and `google` by default). Every full response is stored and hashed;
+billing, job IDs, returned rows, provider-reported totals, and pagination state
+are recorded in `normalized/adyntel_collection.json`. A response with empty
+`raw`/`rawV2` fields is inconclusive and does not erase usable evidence from an
+earlier provider. Provider totals can exceed the returned first page, in which
+case the run is explicitly partial rather than pretending the saved rows are a
+complete ad count.
+
+Use `--platform` for a bounded correction. `--linkedin-page-id` records a
+verified identity hint, while domain lookup is sent until Deepline resolves the
+current page-ID type mismatch in the live Adyntel contract.
+
+Re-normalize an already stored envelope after a parser fix without paying for a
+new provider call:
+
+```bash
+uv run gtm-signals replay-adyntel-ads \
+  data/runs/<run-id> example.com --platform meta \
+  --response data/runs/<run-id>/raw/deepline-adyntel_facebook-response-<hash>.json
+```
+
+Apify remains a fallback/replay path for LinkedIn and Meta. Collect observations
+after storing a scoped Apify
 token in macOS Keychain Access. Use account `provider-secrets` and service
 `gtm-signal-engine:apify-token`; do not place the token in a tracked file or a
 shell command.
@@ -275,7 +306,7 @@ uv run gtm-signals collect-apify-ads \
   --linkedin-company-id 12345678 --platform linkedin
 ```
 
-The versioned default uses
+The fallback's versioned default uses
 [`silva95gustavo/linkedin-ad-library-scraper`](https://apify.com/silva95gustavo/linkedin-ad-library-scraper)
 for LinkedIn and Apify's maintained
 [`apify/facebook-ads-scraper`](https://apify.com/apify/facebook-ads-scraper)
