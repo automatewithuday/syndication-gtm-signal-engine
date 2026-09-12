@@ -34,6 +34,15 @@ Source page, CTA text/type, destination, form/scheduler/signup type, field count
 
 Observed destination URL, canonical landing page, platform, creative ID, UTM parameters, click identifiers, first/last observed times.
 
+### `ad_creative_analysis`
+
+Versioned run artifact containing provider inventory totals, inspected-row and
+usable-text coverage, normalized advertiser/copy/CTA/format/media fields,
+creative fingerprints, evidence lineage, deterministic funnel/offer/audience/
+theme classifications, and per-creative activity state. Provider totals are
+inventory rather than proof of current activity. Raw provider payloads remain
+outside this model and are referenced by path and SHA-256.
+
 ### `opportunity_scores`
 
 Channel, fit, readiness, gap, trigger, total, confidence, scoring version, reasons, risks, and evidence snapshot ID.

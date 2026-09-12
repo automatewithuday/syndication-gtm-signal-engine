@@ -287,6 +287,23 @@ uv run gtm-signals replay-adyntel-ads \
   --response data/runs/<run-id>/raw/deepline-adyntel_facebook-response-<hash>.json
 ```
 
+Analyze the saved Adyntel creatives locally after collection or replay:
+
+```bash
+uv run gtm-signals analyze-ad-creatives data/runs/<run-id>
+```
+
+This writes `normalized/ad_creative_analysis.json`. The versioned deterministic
+classifier separates provider totals from inspected rows, records exact sample
+coverage and inventory tiers, and classifies usable copy by funnel stage,
+offer, audience, message theme, and creative format. Redacted or missing copy
+remains unknown. Provider
+raw responses are hash-verified before their richer fields are used, while the
+normalized output retains evidence URLs, observed times, methods, confidence,
+and raw-file lineage. V1 analyzes text and metadata only; it does not claim to
+understand image or video contents. The aggregate `scoring_inputs` block is the
+stable boundary for the next paid-channel scoring revision.
+
 Apify remains a fallback/replay path for LinkedIn and Meta. Collect observations
 after storing a scoped Apify
 token in macOS Keychain Access. Use account `provider-secrets` and service

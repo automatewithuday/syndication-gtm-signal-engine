@@ -629,3 +629,37 @@ coverage rather than raw page count.
 - This uses one provider relationship but still invokes three channel-native
   tools. The two-account end-to-end collection cost 0.78 credits ($0.078), and
   first-page truncation remains explicit. The complete suite passes 122 tests.
+
+### 2026-09-12 — Deterministic Adyntel creative analysis V1
+
+- Added a local-only, versioned creative-analysis stage over saved Adyntel
+  responses. It makes no provider or AI calls and can be replayed whenever the
+  rules change.
+- Provider inventory and inspected creatives remain separate measurements.
+  ColdIQ has 258 provider-reported ads across conclusive channels and 34 rows
+  inspected; DailyPay has 534 and 30 respectively. Each platform retains its
+  exact coverage ratio and a sample-confidence band.
+- Raw records are joined to normalized evidence by platform and provider ad ID.
+  The analyzer verifies each raw response against the SHA-256 recorded at
+  collection time before using advertiser, headline, body, CTA, creative type,
+  media, destination, and activity metadata.
+- Real Google results exposed a semantic-quality trap: strings such as
+  `DailyPay, Inc. — Text` are advertiser/format metadata, not creative copy.
+  Classification now uses raw headline/body/CTA fields when a raw record is
+  available. Redacted or absent provider content remains unknown and does not
+  lower account qualification.
+- Provider-specific format labels are collapsed into format families; Meta
+  distribution surfaces such as Facebook and Instagram are stored separately
+  rather than incorrectly counted as different creative formats.
+- V1 is deliberately text-and-metadata only. Image and video URLs are retained,
+  but their pixels/audio are marked `not_performed`; multimodal creative review
+  is a later milestone rather than an inferred result.
+- Ad-library totals are inventory evidence, not proof that every channel is
+  currently active. The aggregate therefore says `observed_ad_platforms`; each
+  creative's current/recent/historical state is derived separately from an
+  explicit provider flag or saved dates, and otherwise remains unknown.
+- ColdIQ's 24 analyzable LinkedIn creatives emphasize pipeline/growth and
+  marketing/GTM themes; its ten Google rows expose formats and dates but no
+  usable text. DailyPay has 20 analyzable creatives across LinkedIn and Meta;
+  its ten Google rows likewise lack usable creative text. These are sample-level
+  observations, not claims about the complete inventory.

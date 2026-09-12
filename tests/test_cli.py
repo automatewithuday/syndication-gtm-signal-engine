@@ -96,6 +96,21 @@ class CliTests(unittest.TestCase):
         self.assertEqual(("meta",), mocked.call_args.kwargs["platforms"])
         self.assertEqual("65826193", mocked.call_args.kwargs["linkedin_company_id"])
 
+    def test_ad_creative_analysis_arguments_reach_analyzer(self):
+        result = {
+            "analysis_version": "ad_creative_analysis_v1",
+            "scoring_inputs": {},
+            "platforms": {},
+        }
+        with patch.object(cli, "analyze_ad_creatives", return_value=result) as mocked, \
+             patch("builtins.print"):
+            exit_code = cli.main([
+                "analyze-ad-creatives", "data/runs/test", "--config", "config/custom.json"
+            ])
+        self.assertEqual(0, exit_code)
+        self.assertEqual(Path("data/runs/test"), mocked.call_args.args[0])
+        self.assertEqual(Path("config/custom.json"), mocked.call_args.args[1])
+
 
 if __name__ == "__main__":
     unittest.main()

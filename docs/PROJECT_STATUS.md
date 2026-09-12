@@ -1,6 +1,6 @@
 # Project status
 
-Status as of 2026-09-11. “Complete” means implemented and fixture-tested; it
+Status as of 2026-09-12. “Complete” means implemented and fixture-tested; it
 does not mean the provisional scoring model is calibrated for unattended use.
 
 ## Phase 1 — Website intelligence MVP
@@ -47,6 +47,15 @@ Live validation records ColdIQ totals of 214 LinkedIn and 44 Google ads, with
 DailyPay records totals of 16 Meta, 318 LinkedIn, and 200 Google ads, with ten
 normalized first-page rows for each channel.
 
+The first Adyntel creative-analysis layer is also complete. It hash-verifies
+the saved provider envelopes, joins raw creative detail back to normalized ad
+evidence, and deterministically classifies usable text by funnel stage, offer,
+audience, messaging theme, and provider-neutral format. It persists exact
+provider-total-versus-inspected coverage, inventory tiers, sample-confidence
+bands, text availability, duplicate creative fingerprints, provenance, and a
+stable scoring-input summary. Missing or redacted copy stays unknown; image and
+video contents are explicitly outside the V1 analysis scope.
+
 The Apify live boundary remains implemented as a fallback and replay source with
 pinned LinkedIn and Meta actor builds, asynchronous run IDs, bounded polling,
 explicit item/dollar caps, Keychain-only bearer authentication, immutable raw
@@ -91,4 +100,4 @@ absent; absence on the public web or in bounded provider results is kept as
 unknown. Review reports are stored inside each authoritative run under
 `normalized/account_review.{json,md}`.
 
-The complete deterministic suite passes 122 tests.
+The complete deterministic suite passes 127 tests.

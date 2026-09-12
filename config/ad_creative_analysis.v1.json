@@ -1,0 +1,132 @@
+{
+  "version": "ad_creative_analysis_v1",
+  "analysis_scope": "text_and_metadata_only",
+  "text_quality": {
+    "minimum_usable_characters": 20,
+    "redacted_markers": [
+      "[redacted]"
+    ]
+  },
+  "funnel_stages": [
+    {
+      "label": "conversion",
+      "patterns": [
+        "\\bbook (a |your )?(demo|call)\\b",
+        "\\brequest (a )?demo\\b",
+        "\\bget started\\b",
+        "\\bsign up\\b",
+        "\\bstart (a |your )?(trial|free)\\b",
+        "\\bcontact (us|sales)\\b"
+      ]
+    },
+    {
+      "label": "consideration",
+      "patterns": [
+        "\\bdownload\\b",
+        "\\bguide\\b",
+        "\\breport\\b",
+        "\\bwebinar\\b",
+        "\\bbreakdown\\b",
+        "\\bdiscover\\b",
+        "\\blearn more\\b",
+        "\\bhow (to|we|your)\\b",
+        "\\breasons?\\b",
+        "\\bcase stud(?:y|ies)\\b"
+      ]
+    }
+  ],
+  "offer_types": [
+    {
+      "label": "demo_or_consultation",
+      "patterns": ["\\bdemo\\b", "\\bbook (a |your )?call\\b", "\\bcontact sales\\b"]
+    },
+    {
+      "label": "event",
+      "patterns": ["\\bevent\\b", "\\bconference\\b", "\\bwebinar\\b", "\\bparty\\b", "\\blive performance\\b"]
+    },
+    {
+      "label": "guide_or_report",
+      "patterns": ["\\bguide\\b", "\\breport\\b", "\\bplaybook\\b", "\\bcase stud(?:y|ies)\\b"]
+    },
+    {
+      "label": "educational_content",
+      "patterns": ["\\bbreakdown\\b", "\\bstrategy\\b", "\\bhow (to|we|your)\\b", "\\breasons?\\b", "\\bhere(?:'s| is)\\b"]
+    },
+    {
+      "label": "product_or_service",
+      "patterns": ["\\bintroducing\\b", "\\bplatform\\b", "\\bproduct\\b", "\\bservice\\b", "\\bwe (build|handle)\\b", "\\bworks? with\\b", "\\bmanage\\b"]
+    },
+    {
+      "label": "customer_proof",
+      "patterns": ["\\bcustomer\\b", "\\bclient\\b", "\\bcompanies\\b", "\\bmeetings booked\\b", "\\bconverted to pipeline\\b", "\\barr\\b"]
+    }
+  ],
+  "audiences": [
+    {
+      "label": "marketing_and_gtm",
+      "patterns": ["\\bmarketing\\b", "\\bgtm\\b", "\\bad campaigns?\\b", "\\blinkedin ads?\\b", "\\btam mapping\\b"]
+    },
+    {
+      "label": "sales_and_revenue",
+      "patterns": ["\\bsales\\b", "\\boutbound\\b", "\\bprospecting\\b", "\\bpipeline\\b", "\\bsdrs?\\b", "\\brevenue\\b"]
+    },
+    {
+      "label": "hr_and_people",
+      "patterns": ["\\bhr\\b", "\\bemployee benefits?\\b", "\\bretention\\b", "\\bworkforce\\b", "\\byour team\\b", "\\bexit interviews?\\b"]
+    },
+    {
+      "label": "finance_and_payroll",
+      "patterns": ["\\bpayroll\\b", "\\bpayments?\\b", "\\bprocessing costs?\\b", "\\boff-cycle\\b"]
+    },
+    {
+      "label": "employees_and_consumers",
+      "patterns": ["\\bpayday\\b", "\\bearned pay\\b", "\\bon-demand pay\\b", "\\brent due\\b", "\\bcar payment\\b", "\\bgroceries\\b", "\\bhourly workers?\\b", "\\bteam save\\b", "\\bteam splurge\\b"]
+    },
+    {
+      "label": "executives_and_founders",
+      "patterns": ["\\bceo\\b", "\\bfounders?\\b", "\\bexecutives?\\b"]
+    }
+  ],
+  "messaging_themes": [
+    {
+      "label": "automation_and_ai",
+      "patterns": ["\\bautomat(?:e|es|ed|ing|ion)\\b", "\\bai\\b", "\\bagents?\\b", "\\bclaude code\\b", "\\bopenclaw\\b"]
+    },
+    {
+      "label": "pipeline_and_growth",
+      "patterns": ["\\bpipeline\\b", "\\bgrowth\\b", "\\barr\\b", "\\bmeetings booked\\b", "\\bprospecting\\b", "\\boutbound\\b"]
+    },
+    {
+      "label": "efficiency_and_cost",
+      "patterns": ["\\beffortless(?:ly)?\\b", "\\bsimplif(?:y|ies|ied)\\b", "\\bcuts? .*costs?\\b", "\\badministrative overhead\\b", "\\bcentral hub\\b", "\\btools? that don.t talk\\b"]
+    },
+    {
+      "label": "financial_wellness_and_access",
+      "patterns": ["\\bfinancial\\b", "\\bpayday\\b", "\\bearned pay\\b", "\\bon-demand pay\\b", "\\bpaying bills\\b", "\\brent due\\b", "\\bday-to-day finances\\b"]
+    },
+    {
+      "label": "employee_retention_and_productivity",
+      "patterns": ["\\bretention\\b", "\\bproductivity\\b", "\\bemployee benefits?\\b", "\\bfully present at work\\b", "\\bexit interviews?\\b"]
+    },
+    {
+      "label": "modernization",
+      "patterns": ["\\bmodern\\b", "\\b20th century\\b", "\\b1938\\b", "\\bwork has changed\\b", "\\btomorrow.s\\b"]
+    },
+    {
+      "label": "social_proof_and_results",
+      "patterns": ["[$]\\s?[0-9]", "\\b[0-9]+(?:[.,][0-9]+)?%(?!\\w)", "\\b[0-9][0-9,.]*[kmb]?\\+(?!\\w)", "\\bcustomer\\b", "\\bclient\\b", "\\bcompanies\\b", "\\bmeetings booked\\b", "\\barr\\b", "\\bresults?\\b"]
+    }
+  ],
+  "inventory_tiers": [
+    {"label": "very_high", "minimum_total_ads": 101},
+    {"label": "high", "minimum_total_ads": 21},
+    {"label": "moderate", "minimum_total_ads": 6},
+    {"label": "low", "minimum_total_ads": 1},
+    {"label": "none_observed", "minimum_total_ads": 0}
+  ],
+  "sample_confidence": {
+    "high_minimum_ratio": 0.5,
+    "high_minimum_inspected": 50,
+    "medium_minimum_inspected": 10
+  }
+}

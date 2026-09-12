@@ -33,6 +33,7 @@ from .workflow import crawl_and_analyze
 from .paid_channel_scoring import score_paid_channel_run
 from .external_collection import collect_deepline_technologies
 from .adyntel_collection import collect_adyntel_ads, replay_adyntel_response
+from .ad_creative_analysis import analyze_ad_creatives
 from .apify_collection import collect_apify_ads, replay_apify_ads
 from .jobs import enqueue_batch, list_jobs, run_job, run_pending_jobs
 from .validation import (
@@ -158,6 +159,12 @@ def build_parser() -> argparse.ArgumentParser:
     adyntel_replay.add_argument("domain")
     adyntel_replay.add_argument("--platform", required=True, choices=("meta", "linkedin", "google"))
     adyntel_replay.add_argument("--response", required=True, type=Path)
+    creative_analysis = subparsers.add_parser(
+        "analyze-ad-creatives",
+        help="Classify saved Adyntel creative text and metadata for scoring",
+    )
+    creative_analysis.add_argument("run_dir", type=Path)
+    creative_analysis.add_argument("--config", type=Path)
     apify = subparsers.add_parser(
         "collect-apify-ads", help="Fallback: collect LinkedIn and Meta ad-library observations with Apify"
     )
@@ -392,6 +399,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             "incomplete": result.incomplete, "warnings": result.warnings,
         }, indent=2, sort_keys=True))
         return 1 if result.incomplete else 0
+    if args.command == "analyze-ad-creatives":
+        result = analyze_ad_creatives(args.run_dir, args.config)
+        print(json.dumps({
+            "output": str(args.run_dir / "normalized" / "ad_creative_analysis.json"),
+            "analysis_version": result["analysis_version"],
+            "scoring_inputs": result["scoring_inputs"],
+            "platforms": result["platforms"],
+        }, indent=2, sort_keys=True))
+        return 0
     if args.command == "collect-apify-ads":
         result = collect_apify_ads(
             args.run_dir, args.domain, account_name=args.account_name, config_path=args.config,
