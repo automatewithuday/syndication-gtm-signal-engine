@@ -190,6 +190,10 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
 - Do not require a click destination to retain an attributable ad as activity
   evidence. Represent an unavailable destination as null and exclude that ad
   from landing-page and tracking metrics.
+- Distinguish an explicit, documented zero-result response from an empty or
+  missing provider payload. The latter is inconclusive and must not become
+  negative channel evidence. Do not repeat a request-priced lookup merely to
+  recover output lost by a client/export failure without fresh authorization.
 - Freeze the exact score and evidence snapshot before recording an authorized
   outreach send. Attribute downstream outcomes to that snapshot and evaluate
   meetings/opportunities by signal and channel, not reply rate alone.

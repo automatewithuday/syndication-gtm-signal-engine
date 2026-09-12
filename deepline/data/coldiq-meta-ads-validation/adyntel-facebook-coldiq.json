@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "account": {
+    "name": "ColdIQ",
+    "domain": "coldiq.com"
+  },
+  "provider": "adyntel",
+  "operation": "adyntel_facebook",
+  "query": {
+    "company_domain": "coldiq.com",
+    "active_status": "active_default",
+    "country_code": "US_default"
+  },
+  "status": "inconclusive",
+  "conclusion": "Adyntel completed the lookup but returned empty raw and rawV2 fields. This is not evidence that ColdIQ does not run Meta ads.",
+  "attempts": [
+    {
+      "request_id": "bom1::596p6-1789218358172-aef65c944313",
+      "status": "completed",
+      "credits_charged": 0.13,
+      "cost_usd": 0.013,
+      "result_available": false,
+      "failure": "CLI attempted CSV export for object-shaped output and did not expose the provider response."
+    },
+    {
+      "request_id": "bom1::hvcz5-1789218498001-c7ff04e3565c",
+      "status": "completed",
+      "credits_charged": 0.13,
+      "cost_usd": 0.013,
+      "result_available": false,
+      "provider_response": {
+        "raw": "",
+        "rawV2": "",
+        "view": "rawV2"
+      }
+    }
+  ],
+  "total_credits_charged": 0.26,
+  "total_cost_usd": 0.026,
+  "automatic_retries": 0,
+  "further_calls_authorized": false
+}

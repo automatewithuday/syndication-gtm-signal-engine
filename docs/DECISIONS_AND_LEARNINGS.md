@@ -577,3 +577,18 @@ coverage rather than raw page count.
 - Live Apify validation usage totals $0.15005 for DailyPay and $0.08810 for
   ColdIQ. The complete deterministic suite passes 116 tests, and package builds
   include both the replayable v1 and current v2 configurations.
+
+### 2026-09-12 — Adyntel Meta validation returned an ambiguous empty payload
+
+- Ran the user-requested `adyntel_facebook` lookup for `coldiq.com` using
+  Deepline's managed integration, active-only default, and US default. The live
+  price was 0.13 credits ($0.013) per call.
+- The first paid call completed upstream but the CLI treated object-shaped output
+  as CSV because `--out` was supplied, then discarded the response without a
+  retrievable run ID. After explicit approval, one corrected JSON call completed
+  with a job ID but returned empty `raw` and `rawV2` fields.
+- Total validation cost was 0.26 Deepline credits ($0.026). No third call was
+  attempted. Empty provider payloads without an explicit zero-result contract
+  are `inconclusive`, not confirmation that Meta ads are absent.
+- The audit record is stored at
+  `deepline/data/coldiq-meta-ads-validation/adyntel-facebook-coldiq.json`.
