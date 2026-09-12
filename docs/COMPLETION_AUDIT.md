@@ -1,11 +1,10 @@
 # Completion audit — local review release
 
-Audited 2026-09-11 against `docs/CODEX_EXECUTION_BRIEF.md`, `AGENTS.md`, and the
-user's milestone decisions. This is the full local review release. Live paid
-provider activation, remote persistence, and automated outreach are outside the
-approved current scope: credentials are to be added later through an encrypted
-vault, local files/SQLite were explicitly selected for now, and no outreach was
-authorized.
+Audited 2026-09-12 against `docs/CODEX_EXECUTION_BRIEF.md`, `AGENTS.md`, and the
+user's milestone decisions. This is the full local V1 release. Live paid
+providers are active through credentials held outside the repository; remote
+persistence and automated outreach remain outside the approved scope. Local
+files/SQLite were explicitly selected, and no outreach was authorized.
 
 ## Cross-cutting invariants
 
@@ -15,7 +14,7 @@ authorized.
 | URL/excerpt/time/method/confidence provenance | `Evidence`, fit/gap/trigger validators, account review JSON | Pass |
 | Raw provider isolation | provider protocols and recorded adapters return normalized models with raw artifact pointers | Pass |
 | Canonical/content-hash idempotency | collector identities, canonical repair, exact occurrence tables | Pass |
-| Configured/versioned scoring | content v1/v2 and paid-channel v1 configs plus snapshot hashes | Pass |
+| Configured/versioned scoring | content v1/v2 and paid-channel v1/v2/v3 configs plus snapshot hashes | Pass |
 | No untraceable outreach claims | qualification-gated bundle export and send-time snapshots | Pass |
 | Secrets remain outside artifacts | `SecretVault` and macOS Keychain adapter; repository secret-pattern check empty | Pass |
 
@@ -40,25 +39,27 @@ decision. Ambiguous cases remain unknown when no semantic provider is configured
 
 | Requirement | Evidence | Result |
 | --- | --- | --- |
-| Deepline normalization | recorded enrichment adapter and technology fixture | Pass |
-| Apify Meta/LinkedIn ad collection | guarded live adapter, pinned actor builds, vault boundary, and both platform fixtures | Blocked on local token for live canary |
+| Deepline/BuiltWith normalization | live adapter, immutable envelopes, local replay, malformed-row audit, and fixtures | Pass |
+| Deepline/Adyntel Meta/LinkedIn/Google | single-attempt calls, totals/coverage, billing, raw hashes, and five-account validation | Pass with two recorded inconclusive channels |
+| Apify Meta/LinkedIn fallback | guarded live adapter, pinned actor builds, vault boundary, strict attribution, and fixtures | Pass |
 | Observed/canonical URLs plus UTM/click IDs | `CampaignUrl` and parser tests | Pass |
 | Campaign/SERP pages missed by crawl | recorded Scrapling SERP adapter | Pass |
 | Technology source and limits | `TechnologyObservation` | Pass |
-| Retargeting/programmatic readiness and gap | `paid_channel_scoring.py`, packaged v1 replay and v2 default configs | Pass |
+| Retargeting/programmatic readiness and gap | creative-aware `paid_channels_v3`, known-evidence normalization, v1/v2 replay | Pass |
 
-Adapters are replay/fixture ready. Live actor/endpoint configuration is pending
-the later vault-credential milestone; no unsupported real score is fabricated.
+No unsupported real score is fabricated. ColdIQ's primary Meta result stays
+inconclusive alongside a bounded explicit-zero fallback result. Linear LinkedIn
+stays unknown because configured providers did not resolve it conclusively.
 
 ## Phase 3 — local persistence and orchestration
 
 | Requirement | Evidence | Result |
 | --- | --- | --- |
-| Versioned migrations | five packaged SQLite migrations | Pass |
-| Idempotent/resumable jobs | stable request hash, job transitions, saved-run analysis replay | Pass |
+| Versioned migrations | six packaged SQLite migrations | Pass |
+| Idempotent/resumable jobs | stable request hash, account/stage transitions, saved-run replay without repurchase | Pass |
 | Concurrency/rate limit/retries/cost | bounded workers, crawl delay, Scrapling retries, cost field | Pass |
 | CSV/JSONL batches | `enqueue-batch`, `run-pending-jobs` | Pass |
-| Provider mocks/end-to-end fixtures | recorded provider fixtures and complete workflow test | Pass |
+| Provider mocks/end-to-end fixtures | recorded provider fixtures, complete workflow tests, and five-account live acceptance | Pass |
 | Qualified evidence export | snapshot-checked `export-evidence-bundle` with hard qualification gate | Pass |
 
 Supabase/Postgres is intentionally deferred by the user's local SQLite decision.
@@ -80,15 +81,17 @@ is ready to learn once authorized campaigns generate a meaningful sample.
 
 - DailyPay authoritative run: `20260910T224631Z-52eaa2e5`.
 - ColdIQ authoritative run: `20260910T224633Z-e599a4a6`.
-- Both account reports pass snapshot/hash consistency checks.
-- `reports/REAL_ACCOUNT_REVIEW.json` matches both authoritative report values.
-- Both remain `insufficient_evidence` because content-syndication gap is unknown.
+- HubSpot authoritative run: `20260912T154913Z-418b2e32`.
+- Gong authoritative run: `20260912T155024Z-dabb2a1c`.
+- Linear authoritative run: `20260912T155445Z-9cb88b7e`.
+- `reports/FIVE_ACCOUNT_ACCEPTANCE.{json,md}` records the verified outputs,
+  spend, provider coverage, and unresolved evidence.
 
 ## Verification record
 
-- Full suite: 95 tests passed in the final verification run, including both
-  recorded ad-platform fixtures.
+- Full suite: 137 tests passed in the final verification run; paid APIs are
+  replaced by recorded payloads or fakes in tests.
 - Python compile check and `git diff --check`: pass.
 - Wheel build: pass.
-- Clean temporary wheel install: pass; CLI, five migrations, and installed
-  content/paid scoring configs are present.
+- Wheel and source distribution build: pass; CLI, six migrations, and installed
+  content/paid/creative configurations are present.

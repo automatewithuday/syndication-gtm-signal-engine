@@ -8,7 +8,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from gtm_signal_engine.external_collection import collect_deepline_technologies, normalize_deepline_builtwith
+from gtm_signal_engine.external_collection import (
+    collect_deepline_technologies, normalize_deepline_builtwith,
+    replay_deepline_technologies,
+)
 
 
 CONTRACT = {
@@ -99,6 +102,25 @@ class DeeplineCollectionTests(unittest.TestCase):
             self.assertTrue((run_dir / status["contract_location"]).is_file())
             self.assertIn(status["response_sha256"][:16], status["raw_payload_location"])
             self.assertIn(status["contract_sha256"][:16], status["contract_location"])
+
+    def test_malformed_technology_is_skipped_and_saved_response_can_be_replayed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            run_dir = self._run_dir(Path(temporary))
+            payload = json.loads(json.dumps(PROVIDER_PAYLOAD))
+            payload["Results"][0]["Result"]["Paths"][0]["Technologies"].append({"Name": ""})
+            envelope = {
+                "job_id": "job-1", "status": "completed",
+                "toolResponse": {"rawV2": {"data": payload}},
+                "billing": {"credits_charged": 0.14, "cost_usd": 0.014},
+            }
+            runner = FakeRunner([_completed([], CONTRACT), _completed([], envelope)])
+            result = collect_deepline_technologies(run_dir, "example.com", runner=runner)
+            self.assertEqual(1, len(result.records))
+            status = json.loads((run_dir / "normalized/deepline_collection.json").read_text())
+            self.assertIn("missing name", status["warnings"][0])
+            replayed = replay_deepline_technologies(run_dir, "example.com")
+            self.assertEqual(1, len(replayed.records))
+            self.assertTrue(json.loads((run_dir / "normalized/deepline_collection.json").read_text())["replayed"])
 
     def test_command_failure_is_incomplete_and_is_not_retried(self):
         with tempfile.TemporaryDirectory() as temporary:

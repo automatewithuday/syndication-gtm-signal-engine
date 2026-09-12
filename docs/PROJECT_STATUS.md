@@ -120,4 +120,21 @@ absent; absence on the public web or in bounded provider results is kept as
 unknown. Review reports are stored inside each authoritative run under
 `normalized/account_review.{json,md}`.
 
-The complete deterministic suite passes 134 tests.
+## Five-account acceptance
+
+The complete V1 workflow has now been exercised on ColdIQ, DailyPay, HubSpot,
+Gong, and Linear. All five produced resumable checkpoints, technology evidence,
+creative-aware paid scores, and decision reports. ColdIQ, DailyPay, HubSpot,
+and Gong completed; ColdIQ's inconclusive Adyntel Meta response is bounded by
+an explicit-zero Apify result. Linear remains partial because neither Adyntel
+nor the name-based Apify fallback resolved LinkedIn safely. The acceptance record is in
+`reports/FIVE_ACCOUNT_ACCEPTANCE.md`.
+
+The run exposed and fixed three real-provider edge cases: unnamed BuiltWith
+rows now skip with an audit warning and can be locally replayed; explicit
+Adyntel zero results override stray continuation tokens; and an Apify actor run
+with candidates but no attributable normalized ads is inconclusive rather than
+completed. Provider-cost reports now include Apify and flag paid attempts whose
+billing metadata was not returned inline.
+
+The complete deterministic suite passes 137 tests.

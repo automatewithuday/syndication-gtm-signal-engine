@@ -215,6 +215,24 @@ class ApifyCollectionTests(unittest.TestCase):
             self.assertTrue(result.incomplete)
             self.assertEqual(2, len([item for item in transport.requests if item["method"] == "POST"]))
 
+    def test_successful_actor_with_only_unattributable_rows_is_inconclusive(self):
+        records = [{"adId": "other", "advertiserName": "Different Company"}]
+        responses = [
+            response({"isPublic": True, "isDeprecated": False}),
+            response({"id": "run-li", "status": "SUCCEEDED", "defaultDatasetId": "ds-li"}),
+            (200, records),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            run_dir = self._run_dir(Path(temporary))
+            result = collect_apify_ads(
+                run_dir, "example.com", account_name="Example", platforms=("linkedin",),
+                vault=FakeVault(), transport=FakeTransport(responses),
+            )
+            self.assertTrue(result.incomplete)
+            status = json.loads((run_dir / "normalized/apify_collection.json").read_text())
+            self.assertEqual("inconclusive", status["platforms"]["linkedin"]["status"])
+            self.assertEqual("SUCCEEDED", status["platforms"]["linkedin"]["actor_run_status"])
+
     def test_linkedin_company_id_targets_authoritative_library_identity(self):
         linked = json.loads((ROOT / "tests/fixtures/providers/apify_linkedin_raw.json").read_text())
         responses = [

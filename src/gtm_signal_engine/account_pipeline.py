@@ -9,7 +9,7 @@ from .account_intelligence_report import build_account_intelligence_report
 from .ad_creative_analysis import analyze_ad_creatives
 from .adyntel_collection import collect_adyntel_ads
 from .apify_collection import collect_apify_ads
-from .external_collection import collect_deepline_technologies
+from .external_collection import collect_deepline_technologies, replay_deepline_technologies
 from .paid_channel_scoring import score_paid_channel_run
 from .workflow import analyze_saved_run, crawl_and_analyze
 
@@ -70,6 +70,10 @@ def run_account_v1(
         "domain": domain, "account_name": account_name or domain, "started_at": _now(),
         "finished_at": None, "status": "running", "stages": {}, "blockers": [],
     }
+    # Blockers describe the current evidence state, not an append-only error log.
+    # Stage checkpoints retain the historical details across resumptions.
+    state["blockers"] = []
+    state["status"] = "running"
 
     def checkpoint(stage: str, status: str, detail: dict[str, Any] | None = None) -> None:
         payload = {"status": status, "updated_at": _now(), **(detail or {})}
@@ -83,6 +87,12 @@ def run_account_v1(
     builtwith_status = _load(builtwith_status_path)
     if builtwith_status.get("status") == "completed":
         checkpoint("builtwith", "completed", {"resumed": True})
+    elif builtwith_status.get("raw_payload_location"):
+        result = replay_deepline_technologies(run_dir, domain)
+        checkpoint("builtwith", "completed", {
+            "resumed": True, "replayed": True, "records": len(result.records),
+            "warnings": result.warnings,
+        })
     elif int(builtwith_status.get("attempts", 0)) > 0:
         checkpoint("builtwith", "partial", {"resumed": True, "reason": "previous paid attempt is not retried automatically"})
         state["blockers"].append("BuiltWith did not complete; previous paid attempt was preserved without retry")
@@ -106,23 +116,44 @@ def run_account_v1(
     platform_states = {key: value.get("status", "unknown") for key, value in adyntel_status.get("platforms", {}).items()}
     unresolved = [key for key in ("meta", "linkedin", "google") if platform_states.get(key) in {None, "failed", "inconclusive", "unknown"}]
     checkpoint("adyntel", "completed" if not unresolved else "partial", {"platforms": platform_states, "resumed_platforms": sorted(existing_platforms)})
-    if unresolved:
-        state["blockers"].append(
-            "Adyntel evidence unresolved for: " + ", ".join(unresolved)
-        )
 
     fallback_platforms = tuple(platform for platform in unresolved if platform in {"meta", "linkedin"})
     apify_status = _load(run_dir / "normalized" / "apify_collection.json")
     already_fallback = set(apify_status.get("platforms", {}))
-    fallback_platforms = tuple(platform for platform in fallback_platforms if platform not in already_fallback)
-    if apify_fallback and fallback_platforms:
+    missing_fallback = tuple(platform for platform in fallback_platforms if platform not in already_fallback)
+    if apify_fallback and missing_fallback:
         result = apify_collector(
             run_dir, domain, account_name=account_name or domain,
-            linkedin_company_id=linkedin_company_id, platforms=fallback_platforms,
+            linkedin_company_id=linkedin_company_id, platforms=missing_fallback,
         )
-        checkpoint("apify_fallback", "partial" if result.incomplete else "completed", {"platforms": list(fallback_platforms), "warnings": result.warnings})
+        checkpoint("apify_fallback", "partial" if result.incomplete else "completed", {"platforms": list(missing_fallback), "warnings": result.warnings})
+    elif fallback_platforms and set(fallback_platforms).issubset(already_fallback):
+        saved_states = {
+            platform: apify_status["platforms"][platform].get("status", "unknown")
+            for platform in fallback_platforms
+        }
+        checkpoint(
+            "apify_fallback",
+            "completed" if all(value == "SUCCEEDED" for value in saved_states.values()) else "partial",
+            {"resumed": True, "platforms": saved_states},
+        )
     else:
         checkpoint("apify_fallback", "skipped", {"reason": "not needed or disabled"})
+
+    apify_status = _load(run_dir / "normalized" / "apify_collection.json")
+    def fallback_resolved(platform: str) -> bool:
+        detail = apify_status.get("platforms", {}).get(platform, {})
+        return detail.get("status") == "SUCCEEDED" and (
+            int(detail.get("normalized_records", 0)) > 0
+            or "candidate_records" in detail and int(detail["candidate_records"]) == 0
+        )
+
+    remaining_unresolved = [platform for platform in unresolved if not fallback_resolved(platform)]
+    if remaining_unresolved:
+        state["blockers"].append(
+            "Ad evidence unresolved after configured providers for: "
+            + ", ".join(remaining_unresolved)
+        )
 
     try:
         creative = analyze_ad_creatives(run_dir)

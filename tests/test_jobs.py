@@ -3,11 +3,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from gtm_signal_engine.jobs import enqueue_batch, list_jobs, run_job
+from gtm_signal_engine.review_queue import connect_database
 
 
 class JobTests(unittest.TestCase):
@@ -66,6 +68,36 @@ class JobTests(unittest.TestCase):
             self.assertEqual("completed", first["status"])
             self.assertTrue(second["skipped"])
             self.assertEqual(["example.com"], calls)
+
+    def test_full_pipeline_checkpoints_stages_in_sqlite(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            batch = root / "accounts.jsonl"
+            batch.write_text('{"domain":"example.com"}\n')
+            database = root / "jobs.sqlite3"
+            job_id = enqueue_batch(batch, database)["job_ids"][0]
+
+            def pipeline(domain, **kwargs):
+                kwargs["stage_callback"]("builtwith", "completed", {"records": 3})
+                kwargs["stage_callback"]("adyntel", "partial", {"platforms": {"meta": "partial"}})
+                return {
+                    "pipeline": {"status": "completed"},
+                    "run": {"run_dir": str(root / "run")},
+                    "provider_cost": {"usd": 0.053},
+                }
+
+            with patch("gtm_signal_engine.jobs.run_account_v1", side_effect=pipeline):
+                result = run_job(job_id, database_path=database, report_root=root / "reports")
+            self.assertEqual("completed", result["status"])
+            with connect_database(database) as connection:
+                rows = connection.execute(
+                    "SELECT stage, status, detail_json FROM analysis_job_stages WHERE job_id = ? ORDER BY stage",
+                    (job_id,),
+                ).fetchall()
+            self.assertEqual([("adyntel", "partial"), ("builtwith", "completed")], [
+                (row["stage"], row["status"]) for row in rows
+            ])
+            self.assertEqual(3, json.loads(rows[1]["detail_json"])["records"])
 
 
 if __name__ == "__main__":

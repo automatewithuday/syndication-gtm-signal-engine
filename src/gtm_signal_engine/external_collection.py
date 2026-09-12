@@ -109,7 +109,9 @@ def _timestamp(value: Any) -> str | None:
     return str(value)
 
 
-def normalize_deepline_builtwith(payload: dict[str, Any], *, observed_at: str) -> list[TechnologyObservation]:
+def normalize_deepline_builtwith(
+    payload: dict[str, Any], *, observed_at: str, warnings: list[str] | None = None
+) -> list[TechnologyObservation]:
     """Flatten the inspected BuiltWith Results/Paths/Technologies contract."""
     observations: list[TechnologyObservation] = []
     seen: set[tuple[str, str]] = set()
@@ -135,7 +137,11 @@ def normalize_deepline_builtwith(payload: dict[str, Any], *, observed_at: str) -
                 raise ValueError(f"BuiltWith path {path_index} Technologies must be a list")
             for technology_index, technology in enumerate(technologies):
                 if not isinstance(technology, dict) or not technology.get("Name"):
-                    raise ValueError(f"BuiltWith technology {technology_index} lacks a name")
+                    if warnings is not None:
+                        warnings.append(
+                            f"BuiltWith path {path_index} technology {technology_index} skipped: missing name"
+                        )
+                    continue
                 name = str(technology["Name"])
                 identity = (name.casefold(), source_url.casefold())
                 if identity in seen:
@@ -242,9 +248,10 @@ def collect_deepline_technologies(
         provider_errors = provider_payload.get("Errors") or []
         if provider_errors:
             raise RuntimeError(f"BuiltWith returned {len(provider_errors)} provider error(s)")
-        normalized = [
-            asdict(item) for item in normalize_deepline_builtwith(provider_payload, observed_at=_now())
-        ]
+        normalization_warnings: list[str] = []
+        normalized = [asdict(item) for item in normalize_deepline_builtwith(
+            provider_payload, observed_at=_now(), warnings=normalization_warnings
+        )]
         profile_path = normalized_dir / "external_profile.json"
         profile = json.loads(profile_path.read_text(encoding="utf-8")) if profile_path.is_file() else {}
         profile.update({"schema_version": "1.0", "domain": domain, "technologies": normalized})
@@ -253,7 +260,7 @@ def collect_deepline_technologies(
         profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         status.update({
             "finished_at": _now(), "status": "completed", "incomplete": False,
-            "records": len(normalized),
+            "records": len(normalized), "warnings": normalization_warnings,
         })
         status_path.write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return ProviderResult(
@@ -270,3 +277,49 @@ def collect_deepline_technologies(
             provider="deepline_builtwith", query=domain, incomplete=True,
             warnings=list(status["warnings"]), raw_payload_location=status.get("raw_payload_location"),
         )
+
+
+def replay_deepline_technologies(
+    run_dir: Path, domain: str, *, response_path: Path | None = None
+) -> ProviderResult:
+    """Re-normalize a saved paid BuiltWith envelope without another provider call."""
+    domain = _domain(domain)
+    _validate_run_domain(run_dir, domain)
+    status_path = run_dir / "normalized" / "deepline_collection.json"
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    relative = Path(response_path) if response_path else Path(str(status.get("raw_payload_location", "")))
+    raw_path = relative if relative.is_absolute() else run_dir / relative
+    resolved = raw_path.resolve()
+    try:
+        relative = resolved.relative_to(run_dir.resolve())
+    except ValueError as exc:
+        raise ValueError("saved BuiltWith response must be inside the account run") from exc
+    raw = resolved.read_bytes()
+    expected = status.get("response_sha256")
+    if expected and expected != _sha256(raw):
+        raise ValueError("saved BuiltWith response hash does not match collection status")
+    envelope = json.loads(raw)
+    provider_payload = _provider_payload(envelope)
+    provider_errors = provider_payload.get("Errors") or []
+    if provider_errors:
+        raise RuntimeError(f"BuiltWith returned {len(provider_errors)} provider error(s)")
+    warnings: list[str] = []
+    normalized = [asdict(item) for item in normalize_deepline_builtwith(
+        provider_payload, observed_at=_now(), warnings=warnings
+    )]
+    profile_path = run_dir / "normalized" / "external_profile.json"
+    profile = json.loads(profile_path.read_text(encoding="utf-8")) if profile_path.is_file() else {}
+    profile.update({"schema_version": "1.0", "domain": domain, "technologies": normalized})
+    profile.setdefault("ads", [])
+    profile.setdefault("gap_observations", [])
+    profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    status.update({
+        "finished_at": _now(), "status": "completed", "incomplete": False,
+        "records": len(normalized), "warnings": warnings, "replayed": True,
+        "raw_payload_location": str(relative), "response_sha256": _sha256(raw),
+    })
+    status_path.write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return ProviderResult(
+        provider="deepline_builtwith", query=domain, records=normalized,
+        raw_payload_location=str(relative), warnings=warnings,
+    )

@@ -91,6 +91,13 @@ Idempotent local account requests plus append-only execution transitions.
 Records attempts, saved run/report paths, partial/failure state, and provider
 cost so deterministic analysis can resume from an existing crawl.
 
+### `analysis_job_stages`
+
+One current checkpoint per job and pipeline stage, with status, JSON detail,
+start/end time, and last update. This mirrors the run-local
+`normalized/account_pipeline.json` state into SQLite and makes interrupted
+provider workflows auditable and resumable.
+
 ### `classification_reviews`
 
 Agree/disagree/correct decisions bound to an exact run, page URL, content hash,

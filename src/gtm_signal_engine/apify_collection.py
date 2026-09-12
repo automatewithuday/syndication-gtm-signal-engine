@@ -449,8 +449,13 @@ def collect_apify_ads(
             )
             observations.extend(normalized)
             candidate_records = len(records) if platform == "linkedin" else len(_meta_ad_records(records))
+            evidence_status = (
+                "inconclusive" if candidate_records > 0 and not normalized else "SUCCEEDED"
+            )
             status["platforms"][platform] = {
-                **platform_status, "raw_records": len(records), "normalized_records": len(normalized),
+                **platform_status, "actor_run_status": platform_status.get("status"),
+                "status": evidence_status,
+                "raw_records": len(records), "normalized_records": len(normalized),
                 "candidate_records": candidate_records,
                 "search_url": search_urls[platform], "warnings": warnings,
                 "search_identity": (
@@ -529,6 +534,9 @@ def replay_apify_ads(
         )
         details["normalized_records"] = len(normalized)
         details["warnings"] = platform_warnings
+        candidate_records = details["candidate_records"]
+        details["actor_run_status"] = details.get("actor_run_status") or details.get("status")
+        details["status"] = "inconclusive" if candidate_records > 0 and not normalized else "SUCCEEDED"
     profile_path = run_dir / "normalized" / "external_profile.json"
     profile = json.loads(profile_path.read_text(encoding="utf-8")) if profile_path.is_file() else {}
     replayed_platforms = set(status.get("platforms", {}))
@@ -540,12 +548,14 @@ def replay_apify_ads(
     profile.setdefault("technologies", [])
     profile.setdefault("gap_observations", [])
     profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    completed = all(item.get("status") == "SUCCEEDED" for item in status.get("platforms", {}).values())
     status.update({
         "normalizer_version": APIFY_NORMALIZER_VERSION, "replayed_at": _now(),
         "records": len(observations), "warnings": warnings,
+        "status": "completed" if completed else "partial", "incomplete": not completed,
     })
     status_path.write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return ProviderResult(
         provider="apify_ads_replay", query=domain,
-        records=[asdict(item) for item in observations], warnings=warnings,
+        records=[asdict(item) for item in observations], warnings=warnings, incomplete=not completed,
     )

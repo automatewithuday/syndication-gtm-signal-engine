@@ -25,7 +25,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 134-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 137-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the

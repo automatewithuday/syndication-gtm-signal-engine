@@ -325,7 +325,9 @@ def collect_adyntel_ads(
             returned = len(provider_records)
             total = _total_records(payload, returned)
             continuation = payload.get("continuation_token")
-            truncated = bool(continuation) or (total is not None and total > returned)
+            truncated = not (total == 0 and returned == 0) and (
+                bool(continuation) or (total is not None and total > returned)
+            )
             platform_status = "partial" if truncated else "completed"
             if truncated:
                 warnings.append(
@@ -402,8 +404,8 @@ def replay_adyntel_response(
     provider_records = payload.get("ads", payload.get("results", []))
     returned = len(provider_records)
     total = _total_records(payload, returned)
-    truncated = bool(payload.get("continuation_token")) or (
-        total is not None and total > returned
+    truncated = not (total == 0 and returned == 0) and (
+        bool(payload.get("continuation_token")) or (total is not None and total > returned)
     )
     if truncated:
         warnings.append(

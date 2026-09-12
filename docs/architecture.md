@@ -4,28 +4,29 @@
 
 ```text
 Account source
-  -> provider collection
-  -> raw payload storage
-  -> normalization
   -> website discovery/crawl
   -> deterministic extraction
-  -> optional semantic extraction
+  -> raw provider collection (BuiltWith + Adyntel)
+  -> provider-neutral normalization
+  -> creative analysis
   -> evidence ledger
   -> account aggregation
   -> channel scoring
-  -> QA/qualification
-  -> outreach packet or CRM export
+  -> decision report and human QA
 ```
 
 ## Components
 
 ### Provider adapters
 
-- **Firecrawl:** sitemap discovery, bounded crawl, page markdown, metadata, links.
-- **Apify/ad libraries:** creatives, observed dates, destination URLs, platforms.
-- **Deepline/RapidAPI:** firmographics, technographics, hiring, news, intent.
-- **SERP provider:** indexed landing pages, dated results, external mentions.
-- **Supabase:** normalized entities, raw payload pointers, evidence, scores, runs.
+- **Scrapling:** sole live website provider for sitemap discovery, bounded page
+  collection, browser fallback, metadata, bodies, and links.
+- **Deepline/BuiltWith:** primary technology evidence.
+- **Deepline/Adyntel:** primary Meta, LinkedIn, and Google ad-library evidence.
+- **Apify:** bounded Meta/LinkedIn fallback only after failed or inconclusive
+  Adyntel evidence.
+- **SQLite/local files:** run state, review queues, raw payload pointers,
+  evidence, scores, and stage checkpoints.
 
 Each adapter returns normalized domain objects. Vendor response fields must not be referenced by classifiers or scoring functions.
 
@@ -35,7 +36,9 @@ Seed from the homepage, sitemap, navigation, known resource directories, SERP re
 
 ### Extraction
 
-Run cheap deterministic rules first. Send only ambiguous or high-value pages to a structured-output LLM classifier. Persist both results and record the method/model version.
+Run deterministic rules first. Ambiguous cases remain unknown unless an
+explicit, versioned semantic classifier is configured. Persist the method and
+logic version.
 
 ### Evidence ledger
 
@@ -55,3 +58,7 @@ Score fit, readiness, gap, and trigger separately. Channel totals are configurat
 - Per-signal freshness windows
 - Human QA queue before outreach
 - Outcome feedback tied to the exact score/evidence snapshot used at send time
+
+`run-account-v1` is the V1 orchestration boundary. It writes a checkpoint after
+each stage and never repurchases completed BuiltWith or completed/partial
+Adyntel work during resume.

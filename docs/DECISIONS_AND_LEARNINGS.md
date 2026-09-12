@@ -708,6 +708,35 @@ coverage rather than raw page count.
 - The report keeps provider totals separate from inspected creatives, includes
   cost and evidence coverage, and renders unresolved collection as unknown
   rather than a zero or an absence claim.
-- Local resume validation produced a complete DailyPay report at the already
-  observed 0.53-credit ($0.053) provider cost. ColdIQ remains partial because
-  its paid Adyntel Meta response is inconclusive; no provider call was repeated.
+- Initial strict-Adyntel resume validation produced a complete DailyPay report
+  at the already observed 0.53-credit ($0.053) provider cost. ColdIQ's primary
+  Meta response remained inconclusive; the later five-account pass incorporated
+  its retained explicit-zero Apify fallback without repeating a provider call.
+
+### 2026-09-12 — Five-account acceptance and provider hardening
+
+- Ran the complete bounded workflow on HubSpot, Gong, and Linear, then combined
+  them with ColdIQ and DailyPay for a five-account acceptance set. Each new
+  website crawl was capped at 30 pages and all paid stages were single-attempt.
+- HubSpot completed with 839 technology detections and Adyntel totals of 74
+  Meta, 1,410 LinkedIn, and 4,000 Google ads. Gong completed through a 25-ad
+  LinkedIn fallback after Adyntel LinkedIn failed. Linear remains partial:
+  Adyntel LinkedIn failed and all 25 name-search fallback candidates failed
+  strict attribution, so the signal remains unknown.
+- A single unnamed item in Gong's otherwise valid BuiltWith response originally
+  invalidated the full paid result. Normalization now skips and audits malformed
+  technology rows, and a hash-checked local replay recovered the response
+  without a second provider call.
+- Meta returned a provider total of zero plus a continuation token for Gong and
+  Linear. An explicit zero with zero returned rows now wins over the contradictory
+  token and is stored as `none_observed`, not an unknown and not a claim about
+  activity outside the provider's observed scope.
+- Apify `SUCCEEDED` describes actor execution, not evidence quality. When an
+  actor returns candidates but strict normalization attributes none to the
+  account, the provider stage is now `inconclusive` and remains a blocker.
+- Deepline balance moved from 227.52 to 225.93: exactly 1.59 credits ($0.159),
+  matching three BuiltWith and nine Adyntel attempts. Two failed LinkedIn CLI
+  calls lacked billing fields in their response files but appeared later in the
+  billing ledger. Reports now distinguish captured cost from complete cost.
+- Gong and Linear Apify fallbacks cost $0.03205 and $0.09605 respectively. The
+  total new-account provider spend was $0.28710. No paid request was retried.
