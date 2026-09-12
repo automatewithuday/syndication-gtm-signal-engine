@@ -1,6 +1,6 @@
 # Project status
 
-Status as of 2026-09-12. “Complete” means implemented and fixture-tested; it
+Status as of 2026-09-13. “Complete” means implemented and fixture-tested; it
 does not mean the provisional scoring model is calibrated for unattended use.
 
 ## Phase 1 — Website intelligence MVP
@@ -22,13 +22,17 @@ deterministic rules return unknown at ambiguous boundaries.
 ## Phase 2 — External and campaign signals
 
 Complete at the local contract and recorded-fixture level. First-party campaign
-launches, channel/team launches, and marketing hiring are normalized from saved
+launches, channel/team launches, demand-generation/paid-media hiring, broader
+marketing hiring, and funding rounds are normalized from saved
 Scrapling pages and reviewed before trigger scoring. Recorded Apify ad and
 Deepline technology payloads normalize into provider-neutral observations;
 tracked and canonical destinations, UTM/click identifiers, source dates,
 provenance, confidence, and limitations are preserved. Saved Scrapling SERP
 results can add campaign pages missed by the internal crawl. Retargeting and
-programmatic readiness/gap scores are versioned and configuration-driven.
+programmatic readiness/gap scores are versioned and configuration-driven. V3
+requires two distinct reviewed positive gap signal types; explicit evidence of
+a healthy channel disqualifies the gap, and absence stays unknown. Paid-gap
+candidates use a separate exact-provenance SQLite review queue.
 
 A native Deepline CLI integration is live-validated against the managed
 BuiltWith provider for DailyPay and ColdIQ. It inspects the provider contract

@@ -10,6 +10,10 @@ def _load(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
+def _load_jsonl(path: Path) -> list[dict[str, Any]]:
+    return [json.loads(line) for line in path.read_bytes().splitlines() if line.strip()] if path.is_file() else []
+
+
 def _top(values: dict[str, Any], limit: int = 5) -> list[dict[str, Any]]:
     return [
         {"label": key, "count": int(value)}
@@ -48,6 +52,7 @@ def build_account_intelligence_report(
     """Build a decision-ready report without converting missing evidence into a zero."""
     manifest = _load(run_dir / "manifest.json")
     assets = _load(run_dir / "normalized" / "asset_summary.json")
+    asset_rows = _load_jsonl(run_dir / "normalized" / "assets.jsonl")
     syndication = _load(run_dir / "normalized" / "syndication_scores.json")
     profile = _load(run_dir / "normalized" / "external_profile.json")
     builtwith = _load(run_dir / "normalized" / "deepline_collection.json")
@@ -55,6 +60,8 @@ def build_account_intelligence_report(
     apify = _load(run_dir / "normalized" / "apify_collection.json")
     creative = _load(run_dir / "normalized" / "ad_creative_analysis.json")
     paid = _load(run_dir / "normalized" / "paid_channel_scores.json")
+    initiatives = _load(run_dir / "normalized" / "initiative_candidate_summary.json")
+    gap_candidates = _load(run_dir / "normalized" / "paid_gap_candidate_summary.json")
     pipeline = _load(run_dir / "normalized" / "account_pipeline.json")
     domain = (urlsplit(str(manifest.get("seed_url", ""))).hostname or profile.get("domain") or "").removeprefix("www.")
 
@@ -127,11 +134,26 @@ def build_account_intelligence_report(
         "provider_cost": _billing(run_dir),
         "website": {
             "pages": manifest.get("pages_collected", manifest.get("fetched_pages")), "assets": assets,
+            "case_studies": {
+                "count": int(assets.get("asset_types", {}).get("case_study", 0)),
+                "examples": [
+                    {"title": item.get("title"), "url": item.get("url"), "substantial": item.get("substantial")}
+                    for item in asset_rows if item.get("asset_type") == "case_study"
+                ][:10],
+            },
             "content_syndication_score": syndication or None,
         },
         "technology": {"provider_status": builtwith.get("status", "unknown"), "detections": len(profile.get("technologies", []))},
         "paid_ads": {"provider": "adyntel", "fallback_provider": "apify" if apify else None, "platforms": platforms},
         "paid_channel_scores": paid.get("channels") or None,
+        "business_signals": {
+            "candidate_count": initiatives.get("candidate_count", 0),
+            "dated_candidate_count": initiatives.get("dated_candidate_count", 0),
+            "by_signal_type": initiatives.get("by_signal_type", {}),
+            "review_status": initiatives.get("review_status", "not_run"),
+            "interpretation": "Hiring and funding candidates affect business timing only after evidence review; they do not prove a channel gap.",
+        },
+        "paid_gap_candidates": gap_candidates or None,
         "top_creatives": top_creatives,
         "blockers": list(dict.fromkeys(blockers)),
         "interpretation": "Unknown means evidence was not resolved; it is not a zero and is not proof that a channel is unused.",
@@ -151,10 +173,20 @@ def build_account_intelligence_report(
     ]
     for platform, item in platforms.items():
         lines.append(f"| {platform.title()} | {item['provider_status']} | {item['provider_total_ads'] if item['provider_total_ads'] is not None else 'unknown'} | {item['ads_inspected']} | {item['fallback_status'] or 'not used'} | {item['fallback_ads_inspected']} | {item['evidence_state']} |")
+    lines.extend(["", "## Website proof", ""])
+    lines.append(f"- Case studies observed: {report['website']['case_studies']['count']}")
     lines.extend(["", "## Readiness", ""])
     for channel, item in (report["paid_channel_scores"] or {}).items():
         readiness = item.get("readiness", {})
         lines.append(f"- {channel.title()}: {readiness.get('score', 'unknown')} / 100; {readiness.get('status', 'unknown')}; confidence {readiness.get('confidence', 0)}; evidence coverage {readiness.get('evidence_coverage', 'unknown')}")
+    lines.extend(["", "## Business-timing signals", ""])
+    lines.append(
+        f"- Pending/reviewed candidates: {report['business_signals']['candidate_count']} "
+        f"({report['business_signals']['dated_candidate_count']} with a source date)"
+    )
+    for signal_type, count in report["business_signals"]["by_signal_type"].items():
+        lines.append(f"- {signal_type}: {count}")
+    lines.append(f"- {report['business_signals']['interpretation']}")
     lines.extend(["", "## Blockers", ""])
     lines.extend([f"- {item}" for item in report["blockers"]] or ["- None recorded."])
     lines.extend(["", report["interpretation"], ""])

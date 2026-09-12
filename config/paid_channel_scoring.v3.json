@@ -74,6 +74,26 @@
     "minimum_confidence": 0.6,
     "minimum_evidence_coverage": 0.75
   },
+  "gap": {
+    "signal_points": {
+      "explicit_expansion_intent": 35,
+      "documented_distribution_bottleneck": 30,
+      "active_partner_or_hiring_search": 20,
+      "documented_performance_shortfall": 15
+    },
+    "contradiction_types": [
+      "documented_healthy_channel_program",
+      "documented_channel_success"
+    ],
+    "strength_credit": {
+      "confirmed": 1.0,
+      "likely": 0.85,
+      "possible": 0.5
+    },
+    "minimum_score": 45,
+    "minimum_confidence": 0.7,
+    "minimum_supporting_signal_types": 2
+  },
   "calibration": {
     "status": "provisional",
     "note": "Creative-derived weights are an explicit V3 pilot pending five-account acceptance validation."

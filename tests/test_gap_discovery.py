@@ -214,7 +214,33 @@ class GapDiscoveryTests(unittest.TestCase):
             }) + "\n")
             summary = discover_initiative_candidates(run_dir)
             self.assertEqual(1, summary["candidate_count"])
-            self.assertEqual({"active_marketing_hiring": 1}, summary["by_signal_type"])
+            self.assertEqual({"active_demand_generation_hiring": 1}, summary["by_signal_type"])
+
+    def test_funding_and_demand_gen_hiring_are_distinct_trigger_candidates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir = self.make_run(directory)
+            pages = [
+                {
+                    "url": "https://example.com/jobs/demand-gen", "text": "We are hiring a Demand Generation Manager.",
+                    "main_text": "We are hiring a Demand Generation Manager.", "links": [],
+                    "content_hash": "1" * 64, "observed_at": "2026-09-11T00:00:00+00:00",
+                },
+                {
+                    "url": "https://example.com/press/series-b", "text": "We raised $25 million in Series B funding.",
+                    "main_text": "We raised $25 million in Series B funding.", "links": [],
+                    "content_hash": "2" * 64, "observed_at": "2026-09-11T00:00:00+00:00",
+                    "metadata": {"article:published_time": "2026-08-20T00:00:00+00:00"},
+                },
+            ]
+            (run_dir / "normalized" / "pages.jsonl").write_text(
+                "".join(json.dumps(page) + "\n" for page in pages)
+            )
+            summary = discover_initiative_candidates(run_dir)
+            self.assertEqual(
+                {"active_demand_generation_hiring": 1, "funding_round_announced": 1},
+                summary["by_signal_type"],
+            )
+            self.assertEqual(1, summary["dated_candidate_count"])
 
 
 if __name__ == "__main__":

@@ -11,6 +11,8 @@ from .adyntel_collection import collect_adyntel_ads
 from .apify_collection import collect_apify_ads
 from .external_collection import collect_deepline_technologies, replay_deepline_technologies
 from .paid_channel_scoring import score_paid_channel_run
+from .gap_discovery import discover_initiative_candidates
+from .paid_gap import discover_paid_gap_candidates
 from .workflow import analyze_saved_run, crawl_and_analyze
 
 StageCallback = Callable[[str, str, dict[str, Any]], None]
@@ -95,6 +97,19 @@ def run_account_v1(
         callback(stage, status, payload)
 
     checkpoint("website", "completed" if website["run"].get("status") != "failed" else "partial", {"run_dir": str(run_dir)})
+
+    if (run_dir / "normalized" / "pages.jsonl").is_file():
+        initiatives = discover_initiative_candidates(run_dir)
+        paid_gaps = discover_paid_gap_candidates(run_dir)
+        checkpoint("business_signal_discovery", "completed", {
+            "initiative_candidates": initiatives["candidate_count"],
+            "paid_gap_candidates": paid_gaps["candidate_count"],
+            "review_required": bool(initiatives["candidate_count"] or paid_gaps["candidate_count"]),
+        })
+    else:
+        checkpoint("business_signal_discovery", "partial", {
+            "reason": "normalized pages are unavailable",
+        })
 
     builtwith_status_path = run_dir / "normalized" / "deepline_collection.json"
     builtwith_status = _load(builtwith_status_path)

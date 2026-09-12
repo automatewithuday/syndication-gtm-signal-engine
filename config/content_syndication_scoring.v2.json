@@ -207,6 +207,18 @@
         "signal_type": "active_marketing_hiring",
         "expected_relevance": "adjacent",
         "base_points": 55
+      },
+      {
+        "id": "active_demand_generation_hiring",
+        "signal_type": "active_demand_generation_hiring",
+        "expected_relevance": "adjacent",
+        "base_points": 65
+      },
+      {
+        "id": "funding_round_announced",
+        "signal_type": "funding_round_announced",
+        "expected_relevance": "direct",
+        "base_points": 75
       }
     ],
     "strength_credit": {

@@ -142,6 +142,16 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
 - Store campaign launches, new channel/team launches, and marketing hiring in a
   trigger/initiative candidate stream separate from channel-gap evidence. These
   can explain timing but do not prove a missing or underperforming channel.
+- Treat demand-generation, paid-media, performance, growth, and acquisition
+  hiring as a distinct business-timing signal. Treat attributable funding-round
+  announcements as another direct timing signal. Neither becomes channel-gap
+  evidence unless the same saved excerpt explicitly documents a channel
+  expansion, bottleneck, partner search, or performance shortfall.
+- For retargeting and programmatic gap scoring, require at least two distinct
+  approved supporting signal types. Bind each item to an exact Scrapling URL,
+  content hash, observation time, and excerpt; route mixed supporting and
+  contradicting evidence to review, and let explicit healthy-channel evidence
+  disqualify the gap. No candidates must remain unknown.
 - Preserve a source date only when it is attributable to the saved page through
   publication metadata or an unambiguous page date. Relative copy such as
   “soon” is not a publication date; retain the observation time and leave the

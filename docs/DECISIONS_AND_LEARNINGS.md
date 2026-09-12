@@ -752,3 +752,28 @@ coverage rather than raw page count.
   are retained rather than deleted or rewritten.
 - The ColdIQ authoritative run was replayed locally with Meta skipped. No paid
   provider call was made.
+
+### 2026-09-13 — Demand-gen hiring, funding, and paid-gap review
+
+- Demand-generation, paid-media, performance, growth, acquisition, and ads
+  roles are now surfaced as a distinct `active_demand_generation_hiring`
+  candidate. Broader content, brand, and marketing-operations hiring remains a
+  separate lower-weight business-timing signal.
+- Attributable company announcements that explicitly state a raise, close,
+  secure, or funding announcement are surfaced as `funding_round_announced`.
+  Funding-oriented press-detail slugs receive targeted-crawl priority.
+- Hiring and funding stay in the initiative/trigger stream. They do not prove a
+  retargeting, programmatic, or syndication gap unless the same saved statement
+  explicitly documents a channel limitation or expansion need.
+- Added a separate SQLite review queue for retargeting/programmatic gap
+  candidates. Discovery uses saved Scrapling pages only; approval binds URL,
+  content hash, observation time, matched text, reviewer, rationale, strength,
+  and confidence before merging evidence into the external profile.
+- Paid-channel V3 now requires two distinct approved positive gap signal types,
+  a score of at least 45, and confidence of at least 0.70. Mixed positive and
+  contradictory evidence routes to review; explicit healthy/successful channel
+  evidence disqualifies the gap. Public-web absence remains unknown.
+- External ATS pages are not followed automatically in this increment. Current
+  hiring coverage is first-party and same-domain; a missing job signal therefore
+  means unknown, not no hiring. A later bounded collector may follow only ATS
+  URLs discovered from an authoritative company careers page.

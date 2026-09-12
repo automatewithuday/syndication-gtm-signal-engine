@@ -14,6 +14,13 @@ from .syndication_scoring import score_syndication_run
 from .account_fit import score_account_fit_run
 from .channel_gap import score_channel_gap_run
 from .gap_discovery import collect_gap_targets, discover_gap_candidates, discover_initiative_candidates
+from .paid_gap import discover_paid_gap_candidates
+from .paid_gap_review import (
+    export_paid_gap_profile,
+    ingest_paid_gap_candidates,
+    list_paid_gap_candidates,
+    review_paid_gap_candidate,
+)
 from .review_queue import (
     DEFAULT_DATABASE_PATH,
     export_gap_profile,
@@ -103,6 +110,38 @@ def build_parser() -> argparse.ArgumentParser:
         "discover-initiative-candidates", help="Surface dated job/campaign initiatives for trigger review"
     )
     discover_initiative.add_argument("run_dir", type=Path)
+    discover_paid_gap = subparsers.add_parser(
+        "discover-paid-gap-candidates", help="Surface retargeting/programmatic gap claims for review"
+    )
+    discover_paid_gap.add_argument("run_dir", type=Path)
+    ingest_paid_gap = subparsers.add_parser(
+        "ingest-paid-gap-candidates", help="Ingest paid-channel gap candidates into SQLite"
+    )
+    ingest_paid_gap.add_argument("run_dir", type=Path)
+    ingest_paid_gap.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    list_paid_gap = subparsers.add_parser(
+        "list-paid-gap-candidates", help="List SQLite paid-channel gap candidates"
+    )
+    list_paid_gap.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    list_paid_gap.add_argument("--status", choices=("pending", "approved", "rejected"))
+    list_paid_gap.add_argument("--channel", choices=("retargeting", "programmatic"))
+    review_paid_gap = subparsers.add_parser(
+        "review-paid-gap-candidate", help="Approve or reject one paid-channel gap candidate"
+    )
+    review_paid_gap.add_argument("candidate_id")
+    review_paid_gap.add_argument("--decision", choices=("approve", "reject"), required=True)
+    review_paid_gap.add_argument("--reviewer", required=True)
+    review_paid_gap.add_argument("--notes", required=True)
+    review_paid_gap.add_argument("--strength", choices=("confirmed", "likely", "possible"))
+    review_paid_gap.add_argument("--confidence", type=float)
+    review_paid_gap.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    export_paid_gap = subparsers.add_parser(
+        "export-paid-gap-profile", help="Merge approved paid-gap evidence into the external profile"
+    )
+    export_paid_gap.add_argument("run_dir", type=Path)
+    export_paid_gap.add_argument("--account-name", required=True)
+    export_paid_gap.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    export_paid_gap.add_argument("--output", type=Path)
     ingest_initiative = subparsers.add_parser(
         "ingest-initiative-candidates", help="Ingest initiative candidates into the SQLite review queue"
     )
@@ -338,6 +377,31 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "discover-initiative-candidates":
         result = discover_initiative_candidates(args.run_dir)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    if args.command == "discover-paid-gap-candidates":
+        print(json.dumps(discover_paid_gap_candidates(args.run_dir), indent=2, sort_keys=True))
+        return 0
+    if args.command == "ingest-paid-gap-candidates":
+        print(json.dumps(ingest_paid_gap_candidates(args.run_dir, args.database), indent=2, sort_keys=True))
+        return 0
+    if args.command == "list-paid-gap-candidates":
+        result = list_paid_gap_candidates(args.database, review_status=args.status, channel=args.channel)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    if args.command == "review-paid-gap-candidate":
+        result = review_paid_gap_candidate(
+            args.candidate_id, decision=args.decision, reviewer=args.reviewer,
+            notes=args.notes, database_path=args.database, strength=args.strength,
+            confidence=args.confidence,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    if args.command == "export-paid-gap-profile":
+        result = export_paid_gap_profile(
+            args.run_dir, account_name=args.account_name,
+            database_path=args.database, output_path=args.output,
+        )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     if args.command == "ingest-initiative-candidates":

@@ -80,6 +80,74 @@ def _gap_component(channel: str, observations: list[dict[str, Any]]) -> dict[str
     }
 
 
+def _gap_component_v3(
+    channel: str, observations: list[dict[str, Any]], config: dict[str, Any]
+) -> dict[str, Any]:
+    gap_config = config["gap"]
+    evidence = [
+        item for item in observations
+        if item["channel"] == channel and item["review_status"] == "approved"
+    ]
+    required = {"signal_type", "strength", "method", "content_sha256"}
+    for index, item in enumerate(evidence):
+        if required.difference(item):
+            raise ValueError(f"V3 paid gap observation {index} is missing audited evidence fields")
+        if item["method"] != "scrapling_saved_page":
+            raise ValueError("V3 paid gap evidence must come from an approved Scrapling saved page")
+    supporting = [item for item in evidence if item["position"] == "supports_gap"]
+    contradicting = [item for item in evidence if item["position"] == "contradicts_gap"]
+    if supporting and contradicting:
+        return {
+            "score": None,
+            "confidence": min(float(item["confidence"]) for item in evidence),
+            "state": "unknown", "status": "review", "evidence": evidence,
+            "reasons": ["approved supporting and contradicting gap evidence coexist"],
+        }
+    if contradicting:
+        return {
+            "score": 0.0,
+            "confidence": round(sum(float(item["confidence"]) for item in contradicting) / len(contradicting), 3),
+            "state": "contradicted", "status": "disqualified", "evidence": contradicting,
+            "reasons": ["approved evidence documents a healthy or successful channel program"],
+        }
+    if not supporting:
+        return {
+            "score": None, "confidence": 0.0, "state": "unknown",
+            "status": "insufficient_evidence", "evidence": [],
+            "reasons": ["no approved positive gap evidence; public-web absence is unknown"],
+        }
+    strongest: dict[str, dict[str, Any]] = {}
+    strength_credit = gap_config["strength_credit"]
+    for item in supporting:
+        signal_type = item["signal_type"]
+        if signal_type not in gap_config["signal_points"]:
+            raise ValueError(f"unsupported paid gap signal type: {signal_type}")
+        rank = float(item["confidence"]) * float(strength_credit[item["strength"]])
+        current = strongest.get(signal_type)
+        if current is None or rank > current["rank"]:
+            strongest[signal_type] = {"item": item, "rank": rank}
+    score = round(sum(
+        float(gap_config["signal_points"][signal_type]) * details["rank"]
+        for signal_type, details in strongest.items()
+    ), 1)
+    confidence = round(sum(
+        float(details["item"]["confidence"]) for details in strongest.values()
+    ) / len(strongest), 3)
+    enough_types = len(strongest) >= int(gap_config["minimum_supporting_signal_types"])
+    passes = (
+        enough_types and score >= float(gap_config["minimum_score"])
+        and confidence >= float(gap_config["minimum_confidence"])
+    )
+    reasons = [f"{len(strongest)} distinct approved supporting signal type(s)"]
+    if not enough_types:
+        reasons.append("a paid-channel gap requires at least two distinct supporting signal types")
+    return {
+        "score": score, "confidence": confidence, "state": "observed",
+        "status": "provisional_pass" if passes else "review",
+        "evidence": [details["item"] for details in strongest.values()], "reasons": reasons,
+    }
+
+
 def _score_legacy_paid_channels(
     profile: dict[str, Any], asset_summary: dict[str, Any], config: dict[str, Any]
 ) -> dict[str, Any]:
@@ -357,7 +425,7 @@ def _score_v3_paid_channels(
                     "V3 creative-derived weights remain provisional pending five-account acceptance validation",
                 ],
             },
-            "gap": _gap_component(channel, profile.get("gap_observations", [])),
+            "gap": _gap_component_v3(channel, profile.get("gap_observations", []), config),
         }
     return {
         "channels": components,

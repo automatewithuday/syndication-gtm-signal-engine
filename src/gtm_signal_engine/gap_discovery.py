@@ -17,7 +17,7 @@ from .models import Page
 from .providers import WebsiteFetcher
 
 EXTRACTOR_VERSION = "gap_candidate_rules_v1"
-INITIATIVE_EXTRACTOR_VERSION = "initiative_candidate_rules_v2"
+INITIATIVE_EXTRACTOR_VERSION = "initiative_candidate_rules_v3"
 RULES = (
     (
         "explicit_expansion_intent",
@@ -64,7 +64,27 @@ INITIATIVE_RULES = (
     (
         "active_marketing_hiring",
         "adjacent",
-        re.compile(r"\b(?:hiring|looking for|seeking)\b.{0,100}\b(?:ads? manager|demand generation|content marketing|growth marketing)\b", re.I | re.S),
+        re.compile(r"\b(?:hiring|looking for|seeking)\b.{0,100}\b(?:content marketing|brand marketing|marketing operations)\b", re.I | re.S),
+    ),
+    (
+        "active_demand_generation_hiring",
+        "adjacent",
+        re.compile(
+            r"\b(?:hiring|looking for|seeking|join our team)\b.{0,140}\b"
+            r"(?:demand gen(?:eration)?|paid (?:media|acquisition|social)|performance marketing|"
+            r"growth marketing|acquisition marketing|ads? manager)\b",
+            re.I | re.S,
+        ),
+    ),
+    (
+        "funding_round_announced",
+        "direct",
+        re.compile(
+            r"\b(?:we|our company|the company)\s+(?:has\s+)?(?:raised|secured|closed|announced)\b"
+            r".{0,100}\b(?:\$[\d,.]+\s*(?:million|billion|m|b)?|seed|series\s+[a-z]|"
+            r"funding|financing|investment round)\b",
+            re.I | re.S,
+        ),
     ),
 )
 
@@ -93,7 +113,10 @@ def gap_target_priority(url: str) -> int:
     if segments.intersection({"press", "press-center", "news", "newsroom"}):
         if len(segment_list) < 3:
             return 15
-        topical_slug_terms = ("launch", "campaign", "marketing", "partner", "growth", "open")
+        topical_slug_terms = (
+            "launch", "campaign", "marketing", "partner", "growth", "open",
+            "funding", "fundraise", "raised", "series", "financing", "investment",
+        )
         return 12 if any(term in segment_list[-1] for term in topical_slug_terms) else 100
     return 100
 
@@ -337,6 +360,10 @@ def discover_initiative_candidates(run_dir: Path) -> dict[str, Any]:
             continue
         text = " ".join((page.main_text or page.text).split())
         for signal_type, relevance, pattern in INITIATIVE_RULES:
+            if signal_type == "funding_round_announced" and path_segments.intersection({
+                "case-study", "case-studies", "customers", "customer-stories"
+            }):
+                continue
             for match in pattern.finditer(text):
                 page_signal_identity = (page.url, signal_type)
                 if page_signal_identity in seen:

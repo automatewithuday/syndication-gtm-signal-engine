@@ -212,7 +212,7 @@ uv run gtm-signals discover-initiative-candidates data/runs/<run-id>
 ```
 
 Targeted collection ranks structural paths such as careers, jobs, partner
-programs, demand-generation pages, topical campaign/launch press releases, and
+programs, demand-generation pages, topical campaign/launch/funding press releases, and
 explicit syndication pages. It stays on the account domain, ignores query-string
 duplicates, and can follow relevant links up to the bounded depth. Candidate
 output is written to `normalized/gap_candidates.jsonl`; every record remains
@@ -220,8 +220,9 @@ output is written to `normalized/gap_candidates.jsonl`; every record remains
 
 Initiative discovery writes a separate
 `normalized/initiative_candidates.jsonl`. Public campaign launches, new channel
-or team launches, and active marketing hiring can provide trigger context, but
-they are never promoted into channel-gap evidence. A source date is retained
+or team launches, demand-generation/paid-media hiring, broader marketing hiring,
+and funding rounds can provide trigger context, but they are never promoted
+into channel-gap evidence. A source date is retained
 only when it can be attributed to the saved page; relative job copy such as
 “soon” does not establish a publication date.
 
@@ -243,6 +244,27 @@ Approvals bind to the exact run and content hash reviewed. Trigger scoring is
 configuration-driven, discounts older evidence, and caps undated evidence.
 The final syndication score combines content activity and reviewed initiatives
 by their maximum rather than summing potentially overlapping signals.
+
+Discover and review retargeting/programmatic gap evidence independently:
+
+```bash
+uv run gtm-signals discover-paid-gap-candidates data/runs/<run-id>
+uv run gtm-signals ingest-paid-gap-candidates data/runs/<run-id>
+uv run gtm-signals list-paid-gap-candidates --status pending
+uv run gtm-signals review-paid-gap-candidate <candidate-id> \
+  --decision approve --reviewer <name> --notes <reason> \
+  --strength confirmed --confidence 0.9
+uv run gtm-signals export-paid-gap-profile data/runs/<run-id> --account-name <company>
+uv run gtm-signals score-paid-channels data/runs/<run-id> \
+  data/runs/<run-id>/normalized/external_profile.json
+```
+
+Paid-channel V3 requires two distinct approved supporting signal types and the
+configured score/confidence thresholds. Explicit healthy-channel evidence
+disqualifies the gap; mixed evidence routes to review; no candidates remains
+unknown. The current job-posting coverage is first-party/same-domain only, so
+externally hosted ATS listings are a known coverage gap rather than evidence of
+no hiring.
 
 Persist candidates and review decisions locally in SQLite:
 

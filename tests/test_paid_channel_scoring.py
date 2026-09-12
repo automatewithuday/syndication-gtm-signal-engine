@@ -179,6 +179,38 @@ class PaidChannelScoringTests(unittest.TestCase):
             self.assertEqual("paid_channels_v3", result["scoring_version"])
             self.assertIsNotNone(result["input"]["creative_analysis_sha256"])
 
+    def _paid_gap(self, signal_type, *, position="supports_gap", confidence=0.9):
+        return {
+            "channel": "retargeting", "position": position,
+            "signal_type": signal_type, "strength": "confirmed",
+            "url": "https://example.com/source", "excerpt": "Explicit channel claim.",
+            "observed_at": "2026-09-11T00:00:00+00:00", "confidence": confidence,
+            "review_status": "approved", "method": "scrapling_saved_page",
+            "content_sha256": "a" * 64,
+        }
+
+    def test_v3_requires_two_distinct_supporting_gap_signal_types(self):
+        profile = json.loads(json.dumps(self.profile))
+        profile["gap_observations"] = [self._paid_gap("explicit_expansion_intent")]
+        result = score_paid_channels(profile, self.summary, self.v3_config, self.creative_analysis)
+        gap = result["channels"]["retargeting"]["gap"]
+        self.assertEqual("review", gap["status"])
+        self.assertEqual(31.5, gap["score"])
+
+        profile["gap_observations"].append(self._paid_gap("documented_distribution_bottleneck"))
+        result = score_paid_channels(profile, self.summary, self.v3_config, self.creative_analysis)
+        self.assertEqual("provisional_pass", result["channels"]["retargeting"]["gap"]["status"])
+
+    def test_v3_approved_contradiction_disqualifies_gap(self):
+        profile = json.loads(json.dumps(self.profile))
+        profile["gap_observations"] = [self._paid_gap(
+            "documented_channel_success", position="contradicts_gap"
+        )]
+        result = score_paid_channels(profile, self.summary, self.v3_config, self.creative_analysis)
+        gap = result["channels"]["retargeting"]["gap"]
+        self.assertEqual("disqualified", gap["status"])
+        self.assertEqual(0.0, gap["score"])
+
     def test_installed_share_directory_is_a_default_config_fallback(self):
         from gtm_signal_engine import paid_channel_scoring
 
