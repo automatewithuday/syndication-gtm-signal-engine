@@ -59,6 +59,7 @@ def build_account_intelligence_report(
     domain = (urlsplit(str(manifest.get("seed_url", ""))).hostname or profile.get("domain") or "").removeprefix("www.")
 
     platforms: dict[str, Any] = {}
+    skipped_platforms = set(pipeline.get("collection_policy", {}).get("skipped_ad_platforms", []))
     for platform in ("meta", "linkedin", "google"):
         summary = creative.get("platforms", {}).get(platform, {})
         provider = adyntel.get("platforms", {}).get(platform, {})
@@ -70,7 +71,7 @@ def build_account_intelligence_report(
             and "candidate_records" in fallback
             and int(fallback["candidate_records"]) == 0
         )
-        evidence_state = (
+        evidence_state = "not_collected_by_decision" if platform in skipped_platforms else (
             "observed" if (isinstance(primary_total, int) and primary_total > 0) or fallback_records > 0
             else "none_observed" if (
                 provider.get("status") == "completed" and primary_total == 0
@@ -78,7 +79,10 @@ def build_account_intelligence_report(
             else "unknown"
         )
         platforms[platform] = {
-            "provider_status": summary.get("provider_status") or provider.get("status", "unknown"),
+            "provider_status": (
+                "skipped_by_user" if platform in skipped_platforms
+                else summary.get("provider_status") or provider.get("status", "unknown")
+            ),
             "provider_total_ads": primary_total,
             "ads_inspected": summary.get("ads_inspected", provider.get("normalized_records", 0)),
             "fallback_status": fallback.get("status"),

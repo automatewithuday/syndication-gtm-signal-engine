@@ -209,6 +209,10 @@ def build_parser() -> argparse.ArgumentParser:
     run_account.add_argument("--maximum-sitemaps", type=int, default=20)
     run_account.add_argument("--delay-seconds", type=float, default=0.25)
     run_account.add_argument("--linkedin-company-id")
+    run_account.add_argument(
+        "--skip-ad-platform", action="append", choices=("meta", "linkedin", "google"),
+        help="Do not collect this ad platform; the evidence state remains explicitly unassessed",
+    )
     run_account.add_argument("--no-apify-fallback", action="store_true")
     class_review = subparsers.add_parser("review-classification", help="Agree, disagree, or correct a saved classification")
     class_review.add_argument("run_dir", type=Path)
@@ -470,6 +474,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             maximum_pages=args.maximum_pages, maximum_sitemaps=args.maximum_sitemaps,
             delay_seconds=args.delay_seconds, linkedin_company_id=args.linkedin_company_id,
             apify_fallback=not args.no_apify_fallback,
+            skip_ad_platforms=tuple(args.skip_ad_platform or ()),
         )
         print(json.dumps({
             "status": result["pipeline"]["status"], "run_dir": result["run"]["run_dir"],

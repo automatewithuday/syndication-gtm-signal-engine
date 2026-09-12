@@ -36,6 +36,7 @@ def run_account_v1(
     report_path: Path | None = None, run_dir: Path | None = None, maximum_pages: int = 100,
     maximum_sitemaps: int = 20, delay_seconds: float = 0.25,
     linkedin_company_id: str | None = None, apify_fallback: bool = True,
+    skip_ad_platforms: tuple[str, ...] = (),
     stage_callback: StageCallback | None = None,
     website_runner: Collector = crawl_and_analyze,
     builtwith_collector: Collector = collect_deepline_technologies,
@@ -43,6 +44,14 @@ def run_account_v1(
     apify_collector: Collector = collect_apify_ads,
 ) -> dict[str, Any]:
     """Run or resume one evidence-first account workflow without rebuying completed stages."""
+    invalid_skips = set(skip_ad_platforms).difference({"meta", "linkedin", "google"})
+    if invalid_skips:
+        raise ValueError("skip_ad_platforms must contain only meta, linkedin, or google")
+    skipped_platforms = tuple(dict.fromkeys(skip_ad_platforms))
+    requested_platforms = tuple(
+        platform for platform in ("meta", "linkedin", "google")
+        if platform not in skipped_platforms
+    )
     callback = stage_callback or (lambda *_: None)
     if run_dir is None:
         temporary_report = output_root / "_pipeline_reports" / f"{domain.replace('.', '-')}.json"
@@ -74,6 +83,10 @@ def run_account_v1(
     # Stage checkpoints retain the historical details across resumptions.
     state["blockers"] = []
     state["status"] = "running"
+    state["collection_policy"] = {
+        "skipped_ad_platforms": list(skipped_platforms),
+        "skip_means": "not collected by user decision; not zero and not evidence of absence",
+    }
 
     def checkpoint(stage: str, status: str, detail: dict[str, Any] | None = None) -> None:
         payload = {"status": status, "updated_at": _now(), **(detail or {})}
@@ -107,15 +120,21 @@ def run_account_v1(
     adyntel_path = run_dir / "normalized" / "adyntel_collection.json"
     adyntel_status = _load(adyntel_path)
     existing_platforms = adyntel_status.get("platforms", {})
-    missing = tuple(platform for platform in ("meta", "linkedin", "google") if platform not in existing_platforms)
+    missing = tuple(platform for platform in requested_platforms if platform not in existing_platforms)
     if missing:
         result = adyntel_collector(
             run_dir, domain, linkedin_page_id=linkedin_company_id, platforms=missing
         )
     adyntel_status = _load(adyntel_path)
     platform_states = {key: value.get("status", "unknown") for key, value in adyntel_status.get("platforms", {}).items()}
-    unresolved = [key for key in ("meta", "linkedin", "google") if platform_states.get(key) in {None, "failed", "inconclusive", "unknown"}]
-    checkpoint("adyntel", "completed" if not unresolved else "partial", {"platforms": platform_states, "resumed_platforms": sorted(existing_platforms)})
+    unresolved = [
+        key for key in requested_platforms
+        if platform_states.get(key) in {None, "failed", "inconclusive", "unknown"}
+    ]
+    checkpoint("adyntel", "completed" if not unresolved else "partial", {
+        "platforms": platform_states, "resumed_platforms": sorted(existing_platforms),
+        "skipped_platforms": list(skipped_platforms),
+    })
 
     fallback_platforms = tuple(platform for platform in unresolved if platform in {"meta", "linkedin"})
     apify_status = _load(run_dir / "normalized" / "apify_collection.json")

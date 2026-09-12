@@ -111,6 +111,16 @@ class CliTests(unittest.TestCase):
         self.assertEqual(Path("data/runs/test"), mocked.call_args.args[0])
         self.assertEqual(Path("config/custom.json"), mocked.call_args.args[1])
 
+    def test_account_pipeline_platform_skip_reaches_orchestrator(self):
+        result = {
+            "pipeline": {"status": "completed"}, "run": {"run_dir": "run"},
+            "outputs": {}, "provider_cost": {}, "blockers": [],
+        }
+        with patch.object(cli, "run_account_v1", return_value=result) as mocked, \
+             patch("builtins.print"):
+            cli.main(["run-account-v1", "coldiq.com", "--skip-ad-platform", "meta"])
+        self.assertEqual(("meta",), mocked.call_args.kwargs["skip_ad_platforms"])
+
 
 if __name__ == "__main__":
     unittest.main()

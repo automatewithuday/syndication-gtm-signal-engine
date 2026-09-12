@@ -25,7 +25,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 137-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 138-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -86,6 +86,17 @@ completed or partial provider stages:
 uv run gtm-signals run-account-v1 example.com --account-name Example \
   --resume-run data/runs/<run-id>
 ```
+
+Skip a deliberately out-of-scope ad channel without treating it as a zero:
+
+```bash
+uv run gtm-signals run-account-v1 coldiq.com --account-name ColdIQ \
+  --resume-run data/runs/<run-id> --skip-ad-platform meta
+```
+
+The skip is persisted as `not_collected_by_decision`. Existing raw observations
+remain available for audit, but the skipped platform is not called, retried, or
+used as evidence of channel absence.
 
 Apify is invoked only for failed or inconclusive Meta/LinkedIn Adyntel stages;
 use `--no-apify-fallback` to keep a strictly Adyntel-only run. Provider totals

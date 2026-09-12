@@ -24,6 +24,12 @@ def _now() -> str:
 def _request(record: dict[str, Any]) -> dict[str, Any]:
     seed = normalize_seed(str(record["domain"]))
     domain = (urlsplit(seed).hostname or "").removeprefix("www.")
+    raw_skips = record.get("skip_ad_platforms") or record.get("skip_ad_platform") or ""
+    skip_ad_platforms = [
+        value.strip().lower() for value in str(raw_skips).split(",") if value.strip()
+    ]
+    if set(skip_ad_platforms).difference({"meta", "linkedin", "google"}):
+        raise ValueError("skip_ad_platforms must be a comma-separated subset of meta, linkedin, google")
     return {
         "domain": domain,
         "account_name": str(record.get("account_name") or domain),
@@ -32,6 +38,7 @@ def _request(record: dict[str, Any]) -> dict[str, Any]:
         "delay_seconds": float(record.get("delay_seconds") or 0.25),
         "linkedin_company_id": str(record.get("linkedin_company_id") or "") or None,
         "apify_fallback": str(record.get("apify_fallback", "true")).strip().lower() not in {"0", "false", "no"},
+        "skip_ad_platforms": list(dict.fromkeys(skip_ad_platforms)),
     }
 
 
@@ -144,6 +151,7 @@ def run_job(
                 maximum_pages=request["maximum_pages"], maximum_sitemaps=request["maximum_sitemaps"],
                 delay_seconds=request["delay_seconds"], linkedin_company_id=request.get("linkedin_company_id"),
                 apify_fallback=request.get("apify_fallback", True), stage_callback=stage_callback,
+                skip_ad_platforms=tuple(request.get("skip_ad_platforms", ())),
             )
             final_status = report["pipeline"]["status"]
             run_dir = report["run"]["run_dir"]

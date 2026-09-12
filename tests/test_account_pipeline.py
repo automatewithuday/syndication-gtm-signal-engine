@@ -68,16 +68,22 @@ class AccountPipelineTests(unittest.TestCase):
             result = run_account_v1(
                 "example.com", account_name="Example", output_root=root / "runs",
                 website_runner=website, builtwith_collector=builtwith, adyntel_collector=adyntel,
+                skip_ad_platforms=("meta",),
             )
             self.assertEqual("completed", result["pipeline"]["status"])
-            self.assertEqual(0.53, result["provider_cost"]["credits"])
-            self.assertEqual(["builtwith", ("adyntel", ("meta", "linkedin", "google"))], calls)
+            self.assertEqual(0.4, result["provider_cost"]["credits"])
+            self.assertEqual(["builtwith", ("adyntel", ("linkedin", "google"))], calls)
+            self.assertEqual(
+                "not_collected_by_decision",
+                result["paid_ads"]["platforms"]["meta"]["evidence_state"],
+            )
             self.assertTrue(Path(result["outputs"]["markdown"]).is_file())
 
             resumed = run_account_v1(
                 "example.com", account_name="Example", run_dir=run_dir,
                 builtwith_collector=lambda *_args, **_kwargs: self.fail("BuiltWith was repurchased"),
                 adyntel_collector=lambda *_args, **_kwargs: self.fail("Adyntel was repurchased"),
+                skip_ad_platforms=("meta",),
             )
             self.assertEqual("completed", resumed["pipeline"]["status"])
 

@@ -740,3 +740,15 @@ coverage rather than raw page count.
   billing ledger. Reports now distinguish captured cost from complete cost.
 - Gong and Linear Apify fallbacks cost $0.03205 and $0.09605 respectively. The
   total new-account provider spend was $0.28710. No paid request was retried.
+
+### 2026-09-13 — ColdIQ Meta enrichment explicitly skipped
+
+- The user removed ColdIQ Meta enrichment from the active collection scope.
+- Added repeatable `--skip-ad-platform` support to `run-account-v1` and batch
+  requests. Skipped platforms are excluded from Adyntel collection and Apify
+  fallback, including on a fresh run.
+- A skip is persisted as `not_collected_by_decision`. It is not translated into
+  zero activity, negative gap evidence, or a blocker. Historical raw artifacts
+  are retained rather than deleted or rewritten.
+- The ColdIQ authoritative run was replayed locally with Meta skipped. No paid
+  provider call was made.

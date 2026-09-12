@@ -184,6 +184,10 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
 - Make corrective paid-provider runs platform-selective and preserve the other
   platform's prior evidence and provenance. Never automatically retry an
   ambiguous paid start.
+- Persist user-directed platform exclusions explicitly. A skipped channel must
+  not be collected or sent to a fallback provider, and must be represented as
+  `not_collected_by_decision` rather than zero, unknown-provider failure, or
+  evidence of absence. Retain older raw evidence for audit.
 - Prefer a verified provider entity ID over company-name search and persist the
   identity type/value used. A successful zero-result name query is not adequate
   coverage when an authoritative entity-ID page exists.

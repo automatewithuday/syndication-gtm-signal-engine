@@ -137,4 +137,11 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 137 tests.
+The complete deterministic suite passes 138 tests.
+
+## Current account-specific collection policy
+
+ColdIQ Meta enrichment is explicitly skipped by user decision. The pipeline
+persists this as `not_collected_by_decision`; it is not a zero, blocker, or
+absence claim. Historical raw/provider artifacts remain immutable for audit,
+while future ColdIQ runs should pass `--skip-ad-platform meta`.
