@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 from .collector import normalize_seed
 from .review_queue import DEFAULT_DATABASE_PATH, connect_database
 from .workflow import analyze_saved_run, crawl_and_analyze
+from .account_pipeline import run_account_v1
 
 JobRunner = Callable[..., dict[str, Any]]
 
@@ -29,6 +30,8 @@ def _request(record: dict[str, Any]) -> dict[str, Any]:
         "maximum_pages": int(record.get("maximum_pages") or 100),
         "maximum_sitemaps": int(record.get("maximum_sitemaps") or 20),
         "delay_seconds": float(record.get("delay_seconds") or 0.25),
+        "linkedin_company_id": str(record.get("linkedin_company_id") or "") or None,
+        "apify_fallback": str(record.get("apify_fallback", "true")).strip().lower() not in {"0", "false", "no"},
     }
 
 
@@ -95,7 +98,7 @@ def run_job(
     database_path: Path = DEFAULT_DATABASE_PATH,
     output_root: Path = Path("data/runs"),
     report_root: Path = Path("reports"),
-    runner: JobRunner = crawl_and_analyze,
+    runner: JobRunner | None = None,
 ) -> dict[str, Any]:
     with connect_database(database_path) as connection:
         row = connection.execute("SELECT * FROM analysis_jobs WHERE job_id = ?", (job_id,)).fetchone()
@@ -117,24 +120,56 @@ def run_job(
 
     report_path = report_root / f"{job_id}.json"
     try:
-        if prior_run_dir and (prior_run_dir / "manifest.json").is_file():
+        def stage_callback(stage: str, status: str, detail: dict[str, Any]) -> None:
+            timestamp = _now()
+            with connect_database(database_path) as connection:
+                previous = connection.execute(
+                    "SELECT started_at FROM analysis_job_stages WHERE job_id = ? AND stage = ?",
+                    (job_id, stage),
+                ).fetchone()
+                started_at = previous["started_at"] if previous else timestamp
+                finished_at = timestamp if status in {"completed", "partial", "failed", "skipped"} else None
+                connection.execute(
+                    """INSERT INTO analysis_job_stages(job_id, stage, status, detail_json, started_at, finished_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)
+                       ON CONFLICT(job_id, stage) DO UPDATE SET status=excluded.status,
+                       detail_json=excluded.detail_json, finished_at=excluded.finished_at, updated_at=excluded.updated_at""",
+                    (job_id, stage, status, json.dumps(detail, sort_keys=True), started_at, finished_at, timestamp),
+                )
+
+        if runner is None:
+            report = run_account_v1(
+                request["domain"], account_name=request["account_name"], output_root=output_root,
+                report_path=report_path, run_dir=prior_run_dir,
+                maximum_pages=request["maximum_pages"], maximum_sitemaps=request["maximum_sitemaps"],
+                delay_seconds=request["delay_seconds"], linkedin_company_id=request.get("linkedin_company_id"),
+                apify_fallback=request.get("apify_fallback", True), stage_callback=stage_callback,
+            )
+            final_status = report["pipeline"]["status"]
+            run_dir = report["run"]["run_dir"]
+            provider_cost = float(report["provider_cost"]["usd"])
+        elif prior_run_dir and (prior_run_dir / "manifest.json").is_file():
             report = analyze_saved_run(
                 prior_run_dir, output_path=report_path, account_name=request["account_name"]
             )
+            final_status = "completed" if report["run"]["status"] == "completed" else "partial"
+            run_dir = report["run_dir"]
+            provider_cost = float(report["run"].get("provider_cost_usd", 0))
         else:
             report = runner(
                 request["domain"], output_path=report_path, output_root=output_root,
                 account_name=request["account_name"], maximum_pages=request["maximum_pages"],
                 maximum_sitemaps=request["maximum_sitemaps"], delay_seconds=request["delay_seconds"],
             )
-        final_status = "completed" if report["run"]["status"] == "completed" else "partial"
-        run_dir = report["run_dir"]
+            final_status = "completed" if report["run"]["status"] == "completed" else "partial"
+            run_dir = report["run_dir"]
+            provider_cost = float(report["run"].get("provider_cost_usd", 0))
         timestamp = _now()
         with connect_database(database_path) as connection:
             connection.execute(
                 """UPDATE analysis_jobs SET status = ?, run_dir = ?, report_path = ?,
                    provider_cost_usd = ?, updated_at = ? WHERE job_id = ?""",
-                (final_status, run_dir, str(report_path), float(report["run"].get("provider_cost_usd", 0)), timestamp, job_id),
+                (final_status, run_dir, str(report_path), provider_cost, timestamp, job_id),
             )
             connection.execute(
                 "INSERT INTO analysis_job_events(job_id, status, detail_json, created_at) VALUES (?, ?, ?, ?)",

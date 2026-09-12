@@ -88,6 +88,15 @@ analysis resumes from an existing crawl. CSV/JSONL batch input, bounded account
 concurrency, per-request crawl delay/retry behavior, and qualification-gated
 evidence-bundle export are implemented.
 
+The `run-account-v1` orchestrator now connects the full website, BuiltWith,
+three-channel Adyntel, selective Apify fallback, creative-analysis, V3 scoring,
+and decision-report path. Each stage checkpoints into the account run; queued
+jobs also mirror stage state into SQLite migration 006. Completed BuiltWith
+work and completed/partial Adyntel channels are never automatically purchased
+again. Apify fallback is limited to failed or inconclusive Meta/LinkedIn stages.
+The final JSON/Markdown report preserves provider totals, inspected coverage,
+creative patterns, cost, evidence confidence, and blockers.
+
 Remote Supabase/Postgres is intentionally deferred in line with the user's
 decision to use local files and SQLite for now.
 
@@ -111,4 +120,4 @@ absent; absence on the public web or in bounded provider results is kept as
 unknown. Review reports are stored inside each authoritative run under
 `normalized/account_review.{json,md}`.
 
-The complete deterministic suite passes 132 tests.
+The complete deterministic suite passes 134 tests.

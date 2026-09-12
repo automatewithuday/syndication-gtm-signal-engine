@@ -25,7 +25,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 108-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 134-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -70,6 +70,29 @@ uv run gtm-signals crawl-and-analyze example.com \
 The report contains observed asset evidence plus provisional readiness and
 trigger scores. Fit and gap remain explicitly unknown until run-bound evidence
 is reviewed; missing public evidence never becomes a zero or an absence claim.
+
+Run the complete V1 account-intelligence workflow with stage checkpoints:
+
+```bash
+uv run gtm-signals run-account-v1 example.com --account-name Example
+```
+
+This runs Scrapling website analysis, Deepline/BuiltWith, all three
+Deepline/Adyntel channels, local creative analysis, `paid_channels_v3`, and a
+JSON/Markdown decision report. Resume an existing run without repurchasing
+completed or partial provider stages:
+
+```bash
+uv run gtm-signals run-account-v1 example.com --account-name Example \
+  --resume-run data/runs/<run-id>
+```
+
+Apify is invoked only for failed or inconclusive Meta/LinkedIn Adyntel stages;
+use `--no-apify-fallback` to keep a strictly Adyntel-only run. Provider totals
+and inspected rows remain separate, and a partial first page is a successful
+paid observation rather than a retry condition. The run writes
+`normalized/account_pipeline.json` plus
+`normalized/account_intelligence.{json,md}`.
 
 Scrapling is the sole live web-collection provider for this project. Do not
 silently fall back to Parallel, generic browser research, curl, or another

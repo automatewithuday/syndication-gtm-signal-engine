@@ -45,6 +45,7 @@ from .validation import (
     signal_outcome_metrics,
 )
 from .evidence_bundle import export_evidence_bundle
+from .account_pipeline import run_account_v1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -196,6 +197,19 @@ def build_parser() -> argparse.ArgumentParser:
     run_batch.add_argument("--output-dir", type=Path, default=Path("data/runs"))
     run_batch.add_argument("--report-dir", type=Path, default=Path("reports"))
     run_batch.add_argument("--workers", type=int, default=1)
+    run_account = subparsers.add_parser(
+        "run-account-v1", help="Run or resume the complete website, technology, ads, creative, and scoring workflow"
+    )
+    run_account.add_argument("domain")
+    run_account.add_argument("--account-name")
+    run_account.add_argument("--resume-run", type=Path)
+    run_account.add_argument("--output-dir", type=Path, default=Path("data/runs"))
+    run_account.add_argument("--report", type=Path)
+    run_account.add_argument("--maximum-pages", type=int, default=100)
+    run_account.add_argument("--maximum-sitemaps", type=int, default=20)
+    run_account.add_argument("--delay-seconds", type=float, default=0.25)
+    run_account.add_argument("--linkedin-company-id")
+    run_account.add_argument("--no-apify-fallback", action="store_true")
     class_review = subparsers.add_parser("review-classification", help="Agree, disagree, or correct a saved classification")
     class_review.add_argument("run_dir", type=Path)
     class_review.add_argument("--url", required=True)
@@ -449,6 +463,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0 if all(item["status"] != "failed" for item in result) else 1
+    if args.command == "run-account-v1":
+        result = run_account_v1(
+            args.domain, account_name=args.account_name, output_root=args.output_dir,
+            report_path=args.report, run_dir=args.resume_run,
+            maximum_pages=args.maximum_pages, maximum_sitemaps=args.maximum_sitemaps,
+            delay_seconds=args.delay_seconds, linkedin_company_id=args.linkedin_company_id,
+            apify_fallback=not args.no_apify_fallback,
+        )
+        print(json.dumps({
+            "status": result["pipeline"]["status"], "run_dir": result["run"]["run_dir"],
+            "outputs": result["outputs"], "provider_cost": result["provider_cost"],
+            "blockers": result["blockers"],
+        }, indent=2, sort_keys=True))
+        return 0 if result["pipeline"]["status"] != "failed" else 1
     if args.command == "review-classification":
         result = review_classification(
             args.run_dir, url=args.url, content_sha256=args.content_sha256,

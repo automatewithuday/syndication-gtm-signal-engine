@@ -688,3 +688,26 @@ coverage rather than raw page count.
   DailyPay is 98.0 retargeting and 100.0 programmatic, both provisional-pass;
   its tracked destinations remain unknown in the partial Adyntel sample. Gap
   evidence remains unknown for both accounts.
+
+### 2026-09-12 — Resumable one-command account workflow
+
+- Added `run-account-v1` to connect Scrapling analysis, Deepline/BuiltWith,
+  Deepline/Adyntel Meta/LinkedIn/Google, selective Apify fallback, deterministic
+  creative analysis, `paid_channels_v3`, and a decision-ready JSON/Markdown
+  report.
+- Every stage is checkpointed in `normalized/account_pipeline.json`; batch jobs
+  mirror those checkpoints to the new `analysis_job_stages` SQLite table.
+- Resume logic reuses completed website artifacts instead of rescanning the raw
+  directory. This matters because provider envelopes intentionally share the
+  run's raw boundary but are not Scrapling page metadata.
+- BuiltWith is not automatically retried after a paid attempt. Adyntel purchases
+  only missing platforms, and a truncated first page remains a valid partial
+  result that is not repurchased. Apify fallback applies only to failed or
+  inconclusive Meta/LinkedIn collection, never to partial samples or explicit
+  zero results.
+- The report keeps provider totals separate from inspected creatives, includes
+  cost and evidence coverage, and renders unresolved collection as unknown
+  rather than a zero or an absence claim.
+- Local resume validation produced a complete DailyPay report at the already
+  observed 0.53-credit ($0.053) provider cost. ColdIQ remains partial because
+  its paid Adyntel Meta response is inconclusive; no provider call was repeated.
