@@ -13,6 +13,7 @@ from .external_collection import collect_deepline_technologies, replay_deepline_
 from .paid_channel_scoring import score_paid_channel_run
 from .gap_discovery import discover_initiative_candidates
 from .paid_gap import discover_paid_gap_candidates
+from .job_collection import collect_deepline_jobs
 from .workflow import analyze_saved_run, crawl_and_analyze
 
 StageCallback = Callable[[str, str, dict[str, Any]], None]
@@ -44,6 +45,7 @@ def run_account_v1(
     builtwith_collector: Collector = collect_deepline_technologies,
     adyntel_collector: Collector = collect_adyntel_ads,
     apify_collector: Collector = collect_apify_ads,
+    jobs_collector: Collector | None = None,
 ) -> dict[str, Any]:
     """Run or resume one evidence-first account workflow without rebuying completed stages."""
     invalid_skips = set(skip_ad_platforms).difference({"meta", "linkedin", "google"})
@@ -109,6 +111,36 @@ def run_account_v1(
     else:
         checkpoint("business_signal_discovery", "partial", {
             "reason": "normalized pages are unavailable",
+        })
+
+    jobs_path = run_dir / "normalized" / "job_collection.json"
+    jobs_status = _load(jobs_path)
+    if jobs_status.get("status") == "completed":
+        checkpoint("external_jobs", "completed", {
+            "resumed": True, "records": jobs_status.get("normalized_records", 0),
+        })
+    elif int(sum(
+        int(item.get("attempts", 0)) for item in jobs_status.get("sources", {}).values()
+    )) > 0:
+        checkpoint("external_jobs", "partial", {
+            "resumed": True, "reason": "previous paid attempts are not retried automatically",
+        })
+        state["blockers"].extend(jobs_status.get("warnings", [
+            "External job coverage is incomplete; previous paid attempts were not retried"
+        ]))
+    elif jobs_collector is not None:
+        jobs_result = jobs_collector(
+            run_dir, domain, account_name=account_name or domain,
+            linkedin_company_id=linkedin_company_id,
+        )
+        checkpoint("external_jobs", "partial" if jobs_result.incomplete else "completed", {
+            "records": len(jobs_result.records), "warnings": jobs_result.warnings,
+        })
+        if jobs_result.incomplete:
+            state["blockers"].extend(jobs_result.warnings)
+    else:
+        checkpoint("external_jobs", "skipped", {
+            "reason": "no jobs collector supplied by this library caller",
         })
 
     builtwith_status_path = run_dir / "normalized" / "deepline_collection.json"

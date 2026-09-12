@@ -77,6 +77,15 @@ INITIATIVE_RULES = (
         ),
     ),
     (
+        "active_gtm_hiring",
+        "adjacent",
+        re.compile(
+            r"\b(?:hiring|looking for|seeking|join our team)\b.{0,140}\b"
+            r"(?:(?:GTM|go-to-market|growth|marketing) engineer(?:ing)?)\b",
+            re.I | re.S,
+        ),
+    ),
+    (
         "funding_round_announced",
         "direct",
         re.compile(

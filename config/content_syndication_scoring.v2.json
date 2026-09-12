@@ -215,6 +215,12 @@
         "base_points": 65
       },
       {
+        "id": "active_gtm_hiring",
+        "signal_type": "active_gtm_hiring",
+        "expected_relevance": "adjacent",
+        "base_points": 55
+      },
+      {
         "id": "funding_round_announced",
         "signal_type": "funding_round_announced",
         "expected_relevance": "direct",

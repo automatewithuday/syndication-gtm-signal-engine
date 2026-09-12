@@ -25,8 +25,10 @@ def _billing(run_dir: Path) -> dict[str, Any]:
     builtwith = _load(run_dir / "normalized" / "deepline_collection.json")
     adyntel = _load(run_dir / "normalized" / "adyntel_collection.json")
     apify = _load(run_dir / "normalized" / "apify_collection.json")
+    jobs = _load(run_dir / "normalized" / "job_collection.json")
     billings = [builtwith.get("usage", {}).get("billing", {})]
     billings.extend(item.get("billing", {}) for item in adyntel.get("platforms", {}).values())
+    billings.extend(item.get("usage", {}).get("billing", {}) for item in jobs.get("sources", {}).values())
     apify_usd = sum(
         float(item.get("usage_total_usd") or 0)
         for item in apify.get("platforms", {}).values()
@@ -62,6 +64,8 @@ def build_account_intelligence_report(
     paid = _load(run_dir / "normalized" / "paid_channel_scores.json")
     initiatives = _load(run_dir / "normalized" / "initiative_candidate_summary.json")
     gap_candidates = _load(run_dir / "normalized" / "paid_gap_candidate_summary.json")
+    job_collection = _load(run_dir / "normalized" / "job_collection.json")
+    job_postings = _load_jsonl(run_dir / "normalized" / "job_postings.jsonl")
     pipeline = _load(run_dir / "normalized" / "account_pipeline.json")
     domain = (urlsplit(str(manifest.get("seed_url", ""))).hostname or profile.get("domain") or "").removeprefix("www.")
 
@@ -152,6 +156,25 @@ def build_account_intelligence_report(
             "by_signal_type": initiatives.get("by_signal_type", {}),
             "review_status": initiatives.get("review_status", "not_run"),
             "interpretation": "Hiring and funding candidates affect business timing only after evidence review; they do not prove a channel gap.",
+            "external_job_postings": {
+                "count": len(job_postings),
+                "sources": {
+                    key: {
+                        "status": value.get("status", "unknown"),
+                        "records_returned": value.get("records_returned"),
+                        "normalized_records": value.get("normalized_records", 0),
+                    }
+                    for key, value in job_collection.get("sources", {}).items()
+                },
+                "examples": [
+                    {"title": item.get("title"), "source": item.get("source"), "url": item.get("url"), "posted_at": item.get("posted_at")}
+                    for item in job_postings[:10]
+                ],
+            },
+            "funding": {
+                "provider": "crunchbase_via_deepline",
+                "status": "not_collected" if not (run_dir / "normalized" / "funding_collection.json").is_file() else "see_funding_collection",
+            },
         },
         "paid_gap_candidates": gap_candidates or None,
         "top_creatives": top_creatives,
@@ -184,6 +207,7 @@ def build_account_intelligence_report(
         f"- Pending/reviewed candidates: {report['business_signals']['candidate_count']} "
         f"({report['business_signals']['dated_candidate_count']} with a source date)"
     )
+    lines.append(f"- External demand-gen job postings: {report['business_signals']['external_job_postings']['count']}")
     for signal_type, count in report["business_signals"]["by_signal_type"].items():
         lines.append(f"- {signal_type}: {count}")
     lines.append(f"- {report['business_signals']['interpretation']}")

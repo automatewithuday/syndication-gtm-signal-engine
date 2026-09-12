@@ -21,6 +21,7 @@ from .paid_gap_review import (
     list_paid_gap_candidates,
     review_paid_gap_candidate,
 )
+from .job_collection import collect_deepline_jobs, replay_deepline_jobs
 from .review_queue import (
     DEFAULT_DATABASE_PATH,
     export_gap_profile,
@@ -114,6 +115,21 @@ def build_parser() -> argparse.ArgumentParser:
         "discover-paid-gap-candidates", help="Surface retargeting/programmatic gap claims for review"
     )
     discover_paid_gap.add_argument("run_dir", type=Path)
+    collect_jobs = subparsers.add_parser(
+        "collect-deepline-jobs", help="Collect demand-generation roles from LinkedIn Jobs and Google Jobs"
+    )
+    collect_jobs.add_argument("run_dir", type=Path)
+    collect_jobs.add_argument("domain")
+    collect_jobs.add_argument("--account-name", required=True)
+    collect_jobs.add_argument("--linkedin-company-id")
+    collect_jobs.add_argument("--source", action="append", choices=("linkedin_jobs", "google_jobs"))
+    replay_jobs = subparsers.add_parser(
+        "replay-deepline-jobs", help="Re-normalize saved Deepline job responses without paid calls"
+    )
+    replay_jobs.add_argument("run_dir", type=Path)
+    replay_jobs.add_argument("domain")
+    replay_jobs.add_argument("--account-name", required=True)
+    replay_jobs.add_argument("--linkedin-company-id")
     ingest_paid_gap = subparsers.add_parser(
         "ingest-paid-gap-candidates", help="Ingest paid-channel gap candidates into SQLite"
     )
@@ -382,6 +398,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "discover-paid-gap-candidates":
         print(json.dumps(discover_paid_gap_candidates(args.run_dir), indent=2, sort_keys=True))
         return 0
+    if args.command == "collect-deepline-jobs":
+        result = collect_deepline_jobs(
+            args.run_dir, args.domain, account_name=args.account_name,
+            linkedin_company_id=args.linkedin_company_id,
+            sources=tuple(args.source) if args.source else ("linkedin_jobs", "google_jobs"),
+        )
+        print(json.dumps({
+            "provider": result.provider, "records": len(result.records),
+            "incomplete": result.incomplete, "warnings": result.warnings,
+        }, indent=2, sort_keys=True))
+        return 1 if result.incomplete else 0
+    if args.command == "replay-deepline-jobs":
+        result = replay_deepline_jobs(
+            args.run_dir, args.domain, account_name=args.account_name,
+            linkedin_company_id=args.linkedin_company_id,
+        )
+        print(json.dumps({
+            "provider": result.provider, "records": len(result.records),
+            "incomplete": result.incomplete, "warnings": result.warnings,
+        }, indent=2, sort_keys=True))
+        return 1 if result.incomplete else 0
     if args.command == "ingest-paid-gap-candidates":
         print(json.dumps(ingest_paid_gap_candidates(args.run_dir, args.database), indent=2, sort_keys=True))
         return 0
@@ -539,6 +576,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             delay_seconds=args.delay_seconds, linkedin_company_id=args.linkedin_company_id,
             apify_fallback=not args.no_apify_fallback,
             skip_ad_platforms=tuple(args.skip_ad_platform or ()),
+            jobs_collector=collect_deepline_jobs,
         )
         print(json.dumps({
             "status": result["pipeline"]["status"], "run_dir": result["run"]["run_dir"],

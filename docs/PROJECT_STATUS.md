@@ -34,6 +34,19 @@ requires two distinct reviewed positive gap signal types; explicit evidence of
 a healthy channel disqualifies the gap, and absence stays unknown. Paid-gap
 candidates use a separate exact-provenance SQLite review queue.
 
+External hiring collection now combines LinkedIn Jobs through
+Deepline/HarvestAPI, Google for Jobs through Deepline/OpenWebNinja, and the
+existing same-domain Scrapling career-page crawl. LinkedIn requires an
+authoritative company ID; Google rows require exact employer-name or domain
+attribution. The initial replay-safe pilot found one ColdIQ GTM Engineer role
+and one DailyPay Senior Growth Marketing Manager, Acquisition & Paid role.
+DailyPay's verified LinkedIn company ID (`10497554`) produced zero matching
+LinkedIn roles in the bounded last-month query, while its Google Jobs result was
+preserved; external job coverage is complete for both pilot accounts.
+Crunchbase through Deepline is the required primary funding source, but no
+callable Crunchbase contract is exposed in the current workspace; Aviato is not
+used as a mislabeled substitute.
+
 A native Deepline CLI integration is live-validated against the managed
 BuiltWith provider for DailyPay and ColdIQ. It inspects the provider contract
 before execution, keeps authentication outside the application, disables PII

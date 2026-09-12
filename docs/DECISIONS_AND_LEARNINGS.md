@@ -777,3 +777,38 @@ coverage rather than raw page count.
   hiring coverage is first-party and same-domain; a missing job signal therefore
   means unknown, not no hiring. A later bounded collector may follow only ATS
   URLs discovered from an authoritative company careers page.
+
+### 2026-09-13 — External job-source routing and Crunchbase boundary
+
+- Hiring now has three explicit collection surfaces: first-party career pages
+  via Scrapling, LinkedIn Jobs via Deepline/HarvestAPI, and Google for Jobs via
+  Deepline/OpenWebNinja. Provider payloads, billing, response hashes, query
+  scope, and normalized records remain separate.
+- LinkedIn Jobs requires an authoritative company ID. Without it the source is
+  `skipped_missing_identifier`; a broad title search is not accepted as company
+  coverage. Google results require exact employer-name or employer-domain
+  attribution because quoted queries can still return unrelated employers.
+- Role classification includes demand generation, paid media/acquisition,
+  performance/growth marketing, and GTM/growth/marketing engineering. Unrelated
+  roles are retained only in raw provider responses.
+- The ColdIQ pilot returned one attributable LinkedIn role: `GTM Engineer`.
+  Google returned ten unrelated employers and therefore normalized to zero.
+  The DailyPay pilot returned one attributable Google-for-Jobs role: `Senior
+  Growth Marketing Manager, Acquisition & Paid`. A focused company lookup
+  resolved DailyPay's LinkedIn company ID as `10497554`; the resulting
+  company-ID-scoped LinkedIn Jobs request completed with zero matching roles,
+  so both external sources now have bounded attributable coverage.
+- The two-account job pilot used 0.16 Deepline credits ($0.016): one LinkedIn
+  page and one Google Jobs request per account. Saved responses can be replayed
+  without another provider request.
+- Resolving DailyPay's LinkedIn identity used 0.03 additional credits and its
+  corrective LinkedIn-only jobs request used 0.01. Selective collection now
+  preserves the previously purchased Google Jobs source and normalized rows,
+  preventing a corrective source run from rebuying or overwriting other source
+  evidence.
+- Live Deepline discovery exposed no callable Crunchbase provider in the current
+  workspace. `aviato_get_company_funding_rounds` accepts a Crunchbase ID but is
+  explicitly an Aviato source, so it is not used or relabeled. First-party
+  funding discovery remains corroboration only until the Crunchbase contract is
+  available. An attempted provider-availability feedback submission was blocked
+  by the external-data approval boundary and no session data was sent.

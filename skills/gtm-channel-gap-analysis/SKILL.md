@@ -152,6 +152,18 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   content hash, observation time, and excerpt; route mixed supporting and
   contradicting evidence to review, and let explicit healthy-channel evidence
   disqualify the gap. No candidates must remain unknown.
+- Collect hiring through three separately attributed sources: LinkedIn Jobs via
+  Deepline/HarvestAPI using an authoritative LinkedIn company ID, Google for
+  Jobs via Deepline/OpenWebNinja with exact employer-name or employer-domain
+  validation, and same-domain career pages through Scrapling. A completed
+  search with no attributable rows is scoped coverage, not proof of no hiring.
+- When an identifier is resolved after an initial partial job run, rerun only
+  the missing source and merge it with hash-verified saved sources. Do not
+  repurchase or overwrite already completed Google or LinkedIn job evidence.
+- Use Crunchbase through a callable Deepline Crunchbase contract as the primary
+  structured funding source. Do not relabel Aviato, another aggregator, or a
+  first-party announcement as Crunchbase. Company press releases may corroborate
+  funding but are not a substitute for the requested Crunchbase source.
 - Preserve a source date only when it is attributable to the saved page through
   publication metadata or an unambiguous page date. Relative copy such as
   “soon” is not a publication date; retain the observation time and leave the

@@ -226,6 +226,25 @@ into channel-gap evidence. A source date is retained
 only when it can be attributed to the saved page; relative job copy such as
 “soon” does not establish a publication date.
 
+Collect external demand-generation hiring from LinkedIn Jobs and Google for
+Jobs through Deepline; the Scrapling crawl remains the career-page source:
+
+```bash
+uv run gtm-signals collect-deepline-jobs data/runs/<run-id> example.com \
+  --account-name Example --linkedin-company-id <linkedin-company-id>
+uv run gtm-signals replay-deepline-jobs data/runs/<run-id> example.com \
+  --account-name Example --linkedin-company-id <linkedin-company-id>
+```
+
+LinkedIn collection is skipped when the authoritative company ID is missing.
+Google job-board rows must match the exact employer name or employer domain.
+Corrective single-source runs preserve previously collected sources and their
+normalized records, so adding a LinkedIn ID does not rebuy Google Jobs data.
+The replay command hash-checks saved responses and never makes a paid call.
+Crunchbase-through-Deepline is the required structured funding source; the
+current workspace does not expose that callable contract, so first-party press
+announcements remain corroboration rather than a Crunchbase substitute.
+
 Persist and review initiative candidates separately from the gap queue:
 
 ```bash
