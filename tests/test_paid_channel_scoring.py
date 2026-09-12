@@ -23,6 +23,38 @@ class PaidChannelScoringTests(unittest.TestCase):
         }
         self.summary = {"substantial": {"yes": 20}, "asset_types": {"case_study": 10, "guide": 10}}
         self.config = json.loads((ROOT / "config/paid_channel_scoring.v2.json").read_text())
+        self.v3_config = json.loads((ROOT / "config/paid_channel_scoring.v3.json").read_text())
+        self.creative_analysis = {
+            "analysis_version": "ad_creative_analysis_v1",
+            "scoring_inputs": {
+                "provider_total_ads": 250,
+                "observed_platform_diversity": 3,
+                "ads_inspected": 30,
+                "analyzable_ads": 20,
+                "creative_format_diversity": 4,
+                "messaging_theme_diversity": 5,
+            },
+            "platforms": {
+                "linkedin": {
+                    "provider_status": "partial", "ads_inspected": 10,
+                    "sample_confidence": "medium",
+                    "creative_activity_states": {"unknown": 10},
+                    "funnel_stages": {"awareness": 8, "consideration": 2},
+                },
+                "meta": {
+                    "provider_status": "partial", "ads_inspected": 10,
+                    "sample_confidence": "high",
+                    "creative_activity_states": {"active": 10},
+                    "funnel_stages": {"awareness": 4, "consideration": 6},
+                },
+                "google": {
+                    "provider_status": "partial", "ads_inspected": 10,
+                    "sample_confidence": "medium",
+                    "creative_activity_states": {"recently_observed": 10},
+                    "funnel_stages": {},
+                },
+            },
+        }
 
     def test_scores_readiness_but_keeps_unobserved_gap_unknown(self):
         result = score_paid_channels(self.profile, self.summary, self.config)
@@ -81,6 +113,72 @@ class PaidChannelScoringTests(unittest.TestCase):
             self.assertEqual("paid_channels_v2", result["scoring_version"])
             self.assertTrue((run_dir / "normalized/paid_channel_scores.json").exists())
 
+    def test_v3_scores_creative_inputs_and_traces_factor_sources(self):
+        result = score_paid_channels(
+            self.profile, self.summary, self.v3_config, self.creative_analysis
+        )
+        factors = {
+            item["id"]: item
+            for item in result["channels"]["programmatic"]["readiness"]["factors"]
+        }
+        self.assertEqual(250, factors["ad_inventory"]["observed"])
+        self.assertEqual(15.0, factors["ad_inventory"]["points"])
+        self.assertEqual("normalized/ad_creative_analysis.json", factors["ad_inventory"]["source"])
+        self.assertEqual(20, factors["current_or_recent_creatives"]["observed"])
+        self.assertEqual("observed", factors["tracked_destinations"]["state"])
+        self.assertGreaterEqual(
+            result["channels"]["programmatic"]["readiness"]["evidence_coverage"], 0.75
+        )
+
+    def test_v3_keeps_missing_creative_factors_unknown_instead_of_zero(self):
+        result = score_paid_channels(self.profile, self.summary, self.v3_config)
+        factors = result["channels"]["retargeting"]["readiness"]["factors"]
+        inventory = next(item for item in factors if item["id"] == "ad_inventory")
+        self.assertEqual("unknown", inventory["state"])
+        self.assertIsNone(inventory["observed"])
+        self.assertIsNone(inventory["points"])
+        self.assertEqual("review", result["channels"]["retargeting"]["readiness"]["status"])
+
+    def test_v3_does_not_convert_mixed_historical_and_unknown_activity_to_zero(self):
+        analysis = json.loads(json.dumps(self.creative_analysis))
+        analysis["platforms"]["meta"]["creative_activity_states"] = {"unknown": 10}
+        analysis["platforms"]["google"]["creative_activity_states"] = {"historical": 10}
+        result = score_paid_channels(self.profile, self.summary, self.v3_config, analysis)
+        factor = next(
+            item for item in result["channels"]["retargeting"]["readiness"]["factors"]
+            if item["id"] == "current_or_recent_creatives"
+        )
+        self.assertEqual("unknown", factor["state"])
+        self.assertIsNone(factor["points"])
+
+    def test_v3_keeps_missing_destinations_unknown_for_partial_samples(self):
+        profile = json.loads(json.dumps(self.profile))
+        for ad in profile["ads"]:
+            ad["destination"] = None
+        result = score_paid_channels(profile, self.summary, self.v3_config, self.creative_analysis)
+        factor = next(
+            item for item in result["channels"]["retargeting"]["readiness"]["factors"]
+            if item["id"] == "tracked_destinations"
+        )
+        self.assertEqual("unknown", factor["state"])
+        self.assertIsNone(factor["points"])
+
+    def test_v3_run_snapshots_creative_analysis(self):
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir = Path(directory)
+            (run_dir / "normalized").mkdir()
+            (run_dir / "normalized/asset_summary.json").write_text(json.dumps(self.summary))
+            (run_dir / "normalized/ad_creative_analysis.json").write_text(
+                json.dumps(self.creative_analysis)
+            )
+            profile = run_dir / "normalized/external_profile.json"
+            profile.write_text(json.dumps(self.profile))
+            result = score_paid_channel_run(
+                run_dir, profile, ROOT / "config/paid_channel_scoring.v3.json"
+            )
+            self.assertEqual("paid_channels_v3", result["scoring_version"])
+            self.assertIsNotNone(result["input"]["creative_analysis_sha256"])
+
     def test_installed_share_directory_is_a_default_config_fallback(self):
         from gtm_signal_engine import paid_channel_scoring
 
@@ -88,8 +186,8 @@ class PaidChannelScoringTests(unittest.TestCase):
             root = Path(directory)
             share = root / "share/gtm-signal-engine"
             share.mkdir(parents=True)
-            expected = share / "paid_channel_scoring.v2.json"
-            expected.write_bytes((ROOT / "config/paid_channel_scoring.v2.json").read_bytes())
+            expected = share / "paid_channel_scoring.v3.json"
+            expected.write_bytes((ROOT / "config/paid_channel_scoring.v3.json").read_bytes())
             with patch.object(paid_channel_scoring.Path, "cwd", return_value=root / "elsewhere"), \
                  patch.object(paid_channel_scoring, "DEFAULT_CONFIG_PATH", root / "missing.json"), \
                  patch.object(paid_channel_scoring.sys, "prefix", str(root)):

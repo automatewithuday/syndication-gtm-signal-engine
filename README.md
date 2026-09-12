@@ -255,7 +255,11 @@ uv run gtm-signals score-paid-channels \
 The normalized profile preserves observed and canonical campaign URLs, UTM and
 click identifiers, source provenance, confidence, and technology-detection
 limitations. Without approved positive gap evidence, paid-channel gap scores
-remain unknown.
+remain unknown. The default `paid_channels_v3` scorer consumes the saved
+creative-analysis artifact, records its hash in the score snapshot, normalizes
+readiness over known evidence, and leaves unavailable creative activity or
+destination factors unknown instead of awarding zero points. Pass an older
+configuration explicitly when reproducing a V1 or V2 score.
 
 Collect all three paid-ad channels through Deepline's managed Adyntel tools:
 

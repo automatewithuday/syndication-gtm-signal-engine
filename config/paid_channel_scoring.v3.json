@@ -1,0 +1,81 @@
+{
+  "version": "paid_channels_v3",
+  "score_mode": "known_evidence_normalized",
+  "readiness": {
+    "retargeting": {
+      "ad_inventory": 15,
+      "current_or_recent_creatives": 15,
+      "tracked_destinations": 15,
+      "observable_technology": 25,
+      "content_inventory": 20,
+      "funnel_stage_diversity": 5,
+      "messaging_theme_diversity": 5
+    },
+    "programmatic": {
+      "ad_inventory": 15,
+      "observed_platform_diversity": 15,
+      "current_or_recent_creatives": 10,
+      "tracked_destinations": 10,
+      "observable_technology": 20,
+      "content_diversity": 10,
+      "creative_format_diversity": 10,
+      "messaging_theme_diversity": 10
+    }
+  },
+  "full_at": {
+    "ad_inventory": 100,
+    "observed_platform_diversity": 3,
+    "current_or_recent_creatives": 10,
+    "tracked_destinations": 3,
+    "observable_technology": 2,
+    "content_inventory": 10,
+    "content_diversity": 3,
+    "creative_format_diversity": 4,
+    "funnel_stage_diversity": 3,
+    "messaging_theme_diversity": 4
+  },
+  "sample_confidence_values": {
+    "high": 0.9,
+    "medium": 0.7,
+    "low": 0.4,
+    "none": 0.0
+  },
+  "technology_category_markers": {
+    "retargeting": [
+      "advertiser tracking",
+      "conversion tracking",
+      "retargeting",
+      "remarketing",
+      "audience targeting",
+      "tag management",
+      "tag_management",
+      "customer data platform",
+      "data management platform",
+      "identity resolution",
+      "marketing automation"
+    ],
+    "programmatic": [
+      "ad network",
+      "ad server",
+      "demand-side platform",
+      "ad exchange",
+      "programmatic advertising",
+      "contextual advertising",
+      "advertiser tracking",
+      "conversion tracking",
+      "audience targeting",
+      "customer data platform",
+      "data management platform",
+      "identity resolution"
+    ]
+  },
+  "qualification": {
+    "minimum_readiness": 65,
+    "minimum_confidence": 0.6,
+    "minimum_evidence_coverage": 0.75
+  },
+  "calibration": {
+    "status": "provisional",
+    "note": "Creative-derived weights are an explicit V3 pilot pending five-account acceptance validation."
+  }
+}

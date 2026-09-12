@@ -52,9 +52,9 @@ Google message, audience, offer, or funnel classifications.
   manufactured from the ad-library detail URL.
 - Visual URLs are retained, but image/video contents require a later multimodal
   analysis stage with its own artifact, cost, and validation boundary.
-- The analysis emits a stable `scoring_inputs` block, but current
-  `paid_channels_v2` weights are not silently changed. A future scoring revision
-  must explicitly version and calibrate any creative-derived weights.
+- The analysis emits a stable `scoring_inputs` block. It is now consumed only
+  by the explicitly versioned `paid_channels_v3`; V2 remains unchanged for
+  historical replay.
 
 ## Verification
 

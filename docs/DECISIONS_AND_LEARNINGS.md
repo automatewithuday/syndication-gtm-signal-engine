@@ -663,3 +663,28 @@ coverage rather than raw page count.
   usable text. DailyPay has 20 analyzable creatives across LinkedIn and Meta;
   its ten Google rows likewise lack usable creative text. These are sample-level
   observations, not claims about the complete inventory.
+
+### 2026-09-12 — Paid-channel scoring V3 uses known-evidence normalization
+
+- Added `paid_channels_v3` without modifying V1 or V2. Score snapshots now
+  include the creative-analysis file and SHA-256 so every creative-derived
+  point is bound to an immutable input version.
+- V3 factors cover provider inventory, observed platform diversity,
+  current/recent creative evidence, tracked destinations, relevant technology,
+  content inventory/diversity, creative formats, funnel stages, and messaging
+  themes. Thresholds and weights live in configuration.
+- The first implementation incorrectly converted ColdIQ's historical Google
+  sample plus undated LinkedIn sample into zero current creatives. The corrected
+  rule returns unknown when zero current evidence coexists with unknown activity
+  states; positive active/recent evidence remains usable.
+- Missing destination URLs in partial provider samples also remain unknown. A
+  zero is allowed only when collection is complete, while an observed tracked
+  URL is always positive evidence.
+- Readiness is normalized over known factor weights. Unknown factors reduce the
+  explicit evidence-coverage ratio and final confidence, preventing sparse
+  evidence from qualifying merely because the known-factor score is high.
+- ColdIQ V3 readiness is 97.6 retargeting with review status at 0.70 evidence
+  coverage, and 93.8 programmatic with provisional-pass status at 0.80 coverage.
+  DailyPay is 98.0 retargeting and 100.0 programmatic, both provisional-pass;
+  its tracked destinations remain unknown in the partial Adyntel sample. Gap
+  evidence remains unknown for both accounts.

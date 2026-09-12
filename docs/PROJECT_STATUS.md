@@ -35,7 +35,8 @@ BuiltWith provider for DailyPay and ColdIQ. It inspects the provider contract
 before execution, keeps authentication outside the application, disables PII
 and company metadata, retains the raw response and billing metadata, binds the
 domain to the exact Scrapling run, and records failures as incomplete. The
-resulting technology signals feed versioned `paid_channels_v2` scoring.
+resulting technology signals feed versioned paid-channel scoring. V1 and V2
+remain available for historical replay.
 
 The Deepline/Adyntel ads boundary is now the primary provider-neutral path for
 Meta, LinkedIn, and Google. It performs one paid call per selected channel,
@@ -55,6 +56,16 @@ provider-total-versus-inspected coverage, inventory tiers, sample-confidence
 bands, text availability, duplicate creative fingerprints, provenance, and a
 stable scoring-input summary. Missing or redacted copy stays unknown; image and
 video contents are explicitly outside the V1 analysis scope.
+
+`paid_channels_v3` now consumes this creative artifact. Its factors cover
+observed inventory, current/recent creative evidence, destinations, relevant
+technology, content, funnel stages, message themes, platforms, and formats.
+Unknown factors have null points and reduce evidence coverage/confidence rather
+than becoming zeros. ColdIQ currently scores 97.6 retargeting readiness with a
+review status because current activity and destinations remain unknown; its
+programmatic readiness is 93.8 provisional-pass. DailyPay scores 98.0 and
+100.0 respectively, with observed active/recent creative evidence. Gap scores
+for both accounts remain unknown.
 
 The Apify live boundary remains implemented as a fallback and replay source with
 pinned LinkedIn and Meta actor builds, asynchronous run IDs, bounded polling,
@@ -100,4 +111,4 @@ absent; absence on the public web or in bounded provider results is kept as
 unknown. Review reports are stored inside each authoritative run under
 `normalized/account_review.{json,md}`.
 
-The complete deterministic suite passes 127 tests.
+The complete deterministic suite passes 132 tests.
