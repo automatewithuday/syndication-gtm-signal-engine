@@ -147,6 +147,7 @@ def collect_gap_targets(
     maximum_depth: int = 1,
     delay_seconds: float = 0.25,
     include_urls: list[str] | None = None,
+    target_plan_path: Path | None = None,
     fetcher: WebsiteFetcher | None = None,
 ) -> dict[str, Any]:
     if maximum_pages < 1:
@@ -168,6 +169,18 @@ def collect_gap_targets(
     pages, _ = _load_pages(pages_path)
     existing_urls = {page.url for page in pages}
     discovered = [json.loads(line)["url"] for line in discovered_path.read_bytes().splitlines() if line.strip()]
+    planned_urls: list[str] = []
+    plan_snapshot_id: str | None = None
+    if target_plan_path is not None:
+        plan = json.loads(target_plan_path.read_text(encoding="utf-8"))
+        if plan.get("run_id") != manifest.get("run_id"):
+            raise ValueError("gap target plan does not match the current run")
+        if str(plan.get("account_domain", "")).lower().removeprefix("www.") != base_host:
+            raise ValueError("gap target plan does not match the run domain")
+        planned_urls = [
+            str(item["url"]) for item in plan.get("targets", []) if item.get("selected")
+        ]
+        plan_snapshot_id = plan.get("snapshot_id")
     existing_target_ids = {_target_identity(url) for url in existing_urls}
     target_queue: list[tuple[int, int, str]] = []
     queued_target_ids: set[str] = set()
@@ -183,7 +196,9 @@ def collect_gap_targets(
         queued_target_ids.add(identity)
         heapq.heappush(target_queue, (-1 if explicit else priority, depth, normalized))
 
-    discovered_identities = {_target_identity(canonicalize_url(url)) for url in discovered}
+    discovered_identities = {
+        _target_identity(canonicalize_url(url)) for url in [*discovered, *planned_urls]
+    }
     for url in include_urls or []:
         normalized = canonicalize_url(url)
         if _target_identity(normalized) not in discovered_identities:
@@ -228,6 +243,8 @@ def collect_gap_targets(
             final_host = (urlsplit(document.final_url).hostname or "").lower()
             if final_host not in allowed_hosts:
                 raise ValueError(f"redirected outside allowed hosts to {document.final_url}")
+            if _target_identity(canonicalize_url(document.final_url)) != _target_identity(target):
+                raise ValueError(f"redirected to unrelated path {document.final_url}")
             content_type = document.headers.get("content-type", "").lower()
             if "html" not in content_type and not document.body.lstrip().lower().startswith((b"<!doctype html", b"<html")):
                 raise ValueError("target did not return HTML")
@@ -243,8 +260,9 @@ def collect_gap_targets(
         if delay_seconds:
             time.sleep(delay_seconds)
 
-    by_identity = {(page.url, page.content_hash): page for page in [*pages, *fetched_pages]}
-    all_pages = list(by_identity.values())
+    by_url = {page.url: page for page in pages}
+    by_url.update({page.url: page for page in fetched_pages})
+    all_pages = list(by_url.values())
     store.save_pages(all_pages)
     store.save_discovered_urls(all_discovered, seed_url)
     manifest["pages_collected"] = len(all_pages)
@@ -261,6 +279,8 @@ def collect_gap_targets(
         "maximum_pages": maximum_pages,
         "maximum_depth": maximum_depth,
         "explicit_targets": [canonicalize_url(url) for url in include_urls or []],
+        "target_plan": str(target_plan_path) if target_plan_path else None,
+        "target_plan_snapshot_id": plan_snapshot_id,
         "targets_selected": selected_targets,
         "pages_fetched": [page.url for page in fetched_pages],
         "errors": errors,

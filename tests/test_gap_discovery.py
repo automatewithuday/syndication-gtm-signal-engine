@@ -140,6 +140,35 @@ class GapDiscoveryTests(unittest.TestCase):
                     fetcher=fetcher,
                 )
 
+    def test_target_redirect_to_unrelated_path_is_not_collected_as_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir = self.make_run(directory)
+            target = "https://example.com/careers"
+
+            class RedirectFetcher(FixtureFetcher):
+                def fetch(self, url):
+                    document = super().fetch(url)
+                    if url == target:
+                        return FetchedDocument(
+                            requested_url=url, final_url="https://example.com/",
+                            status_code=200, headers=document.headers,
+                            body=b"<html><main>Homepage</main></html>",
+                        )
+                    return document
+
+            fetcher = RedirectFetcher({
+                "https://example.com/robots.txt": b"User-agent: *\nAllow: /\n",
+                target: b"unused",
+            })
+            result = collect_gap_targets(
+                run_dir, maximum_pages=1, delay_seconds=0, fetcher=fetcher
+            )
+
+            self.assertEqual([], result["pages_fetched"])
+            self.assertIn("redirected to unrelated path", result["errors"][0]["error"])
+            pages = (run_dir / "normalized" / "pages.jsonl").read_text().splitlines()
+            self.assertEqual(1, len(pages))
+
     def test_candidate_rules_create_pending_review_not_scored_evidence(self):
         with tempfile.TemporaryDirectory() as directory:
             run_dir = self.make_run(directory)

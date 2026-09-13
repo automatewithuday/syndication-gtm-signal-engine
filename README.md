@@ -27,7 +27,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 160-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 168-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -254,6 +254,25 @@ uv run gtm-signals collect-gap-targets data/runs/<run-id> --maximum-pages 1 \
 uv run gtm-signals discover-gap-candidates data/runs/<run-id>
 uv run gtm-signals discover-initiative-candidates data/runs/<run-id>
 ```
+
+For a resumable, evidence-driven pass, build the target plan from saved
+same-domain URL inventory, attributable ad destinations, and optional saved
+Scrapling SERP rows, then acquire and resolve in one command:
+
+```bash
+uv run gtm-signals plan-gap-evidence data/runs/<run-id> --maximum-targets 25
+uv run gtm-signals acquire-gap-evidence data/runs/<run-id> \
+  --account-name <company> --maximum-targets 25 --maximum-pages 10
+```
+
+Search rows supplied with `--search-results <jsonl>` must declare
+`method: scrapling_saved_serp`; generic or unattributed search output is
+rejected. Plans are same-domain, bounded, versioned, and hash-addressed from
+logical inputs. Successfully fetched URLs are not selected again, and failed
+targets are withheld unless `--retry-failed` is explicitly supplied. A target
+that redirects to an unrelated path is recorded as a failed observation, never
+as evidence from the destination page. `no_targets`, partial collection, and
+zero candidates all leave channel absence unknown.
 
 Targeted collection ranks structural paths such as careers, jobs, partner
 programs, demand-generation pages, topical campaign/launch/funding press releases, and

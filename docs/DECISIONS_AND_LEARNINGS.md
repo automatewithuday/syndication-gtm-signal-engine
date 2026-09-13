@@ -934,3 +934,29 @@ coverage rather than raw page count.
   unknown. DailyPay and ColdIQ replays produced zero current candidates and all
   null channel totals, with priority scores unchanged at 91.7 and 88.6. No paid
   provider calls were made.
+
+### 2026-09-13 — Targeted gap acquisition is planned, bounded, and resumable
+
+- Added `plan-gap-evidence` to merge three saved sources: the complete
+  same-domain discovery inventory, attributable ad destinations, and optional
+  search rows carrying `scrapling_saved_serp` provenance. Generic search rows
+  are rejected rather than silently entering the evidence path.
+- An initial DailyPay plan admitted 106 broad press URLs. That was discovery
+  noise, not a useful research queue. Press and partner detail pages now require
+  a channel-specific slug (or an explicit partner-program path), while careers,
+  campaign paths, ad destinations, and precise search results retain priority.
+- Added `acquire-gap-evidence` to fetch only selected plan targets with
+  Scrapling, preserve raw/normalized artifacts, and immediately replay the
+  exact-run gap-resolution workflow. No alternate website provider is used.
+- The live DailyPay check fetched the campaign strategy page successfully.
+  Two legacy campaign URLs redirected to the homepage; cross-path redirects are
+  now rejected and logged rather than misattributed as target-page evidence.
+- Prior targeted attempts are persisted in the plan. Successful pages are
+  excluded and failed targets require `--retry-failed`, preventing repeated
+  requests to known dead routes. Logical plan hashes exclude timestamps and
+  unrelated profile changes, so processing time alone does not change identity.
+- Final replay selected no new pages: DailyPay had nine relevant targets, seven
+  already fetched and two held failed targets; ColdIQ had three, all already
+  fetched. All content-syndication, retargeting, and programmatic gaps remain
+  null/`insufficient_evidence`. No paid provider calls were made.
+- Validation: `docs/validation/2026-09-13-targeted-gap-evidence-acquisition.md`.

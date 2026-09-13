@@ -72,6 +72,36 @@ class CliTests(unittest.TestCase):
         self.assertEqual(Path("scores.sqlite3"), mocked.call_args.kwargs["database_path"])
         self.assertEqual(date(2026, 9, 13), mocked.call_args.kwargs["as_of"])
 
+    def test_gap_acquisition_arguments_reach_scrapling_workflow(self):
+        with patch.object(cli, "acquire_gap_evidence", return_value={}) as mocked, \
+             patch.object(cli, "ScraplingFetcher", return_value="scrapling"), \
+             patch("builtins.print"):
+            cli.main([
+                "acquire-gap-evidence", "run", "--account-name", "Example",
+                "--maximum-targets", "8", "--maximum-pages", "5",
+                "--maximum-depth", "3", "--delay-seconds", "0.1",
+                "--search-results", "saved-search.jsonl", "--retry-failed",
+            ])
+        self.assertEqual(Path("run"), mocked.call_args.args[0])
+        self.assertEqual(8, mocked.call_args.kwargs["maximum_targets"])
+        self.assertEqual(5, mocked.call_args.kwargs["maximum_pages"])
+        self.assertEqual(3, mocked.call_args.kwargs["maximum_depth"])
+        self.assertEqual([Path("saved-search.jsonl")], mocked.call_args.kwargs["search_result_paths"])
+        self.assertTrue(mocked.call_args.kwargs["retry_failed"])
+        self.assertEqual("scrapling", mocked.call_args.kwargs["fetcher"])
+
+    def test_gap_plan_arguments_reach_planner(self):
+        with patch.object(cli, "build_gap_target_plan", return_value={}) as mocked, \
+             patch("builtins.print"):
+            cli.main([
+                "plan-gap-evidence", "run", "--maximum-targets", "8",
+                "--search-results", "saved-search.jsonl", "--retry-failed",
+            ])
+        self.assertEqual(Path("run"), mocked.call_args.args[0])
+        self.assertEqual(8, mocked.call_args.kwargs["maximum_targets"])
+        self.assertEqual([Path("saved-search.jsonl")], mocked.call_args.kwargs["search_result_paths"])
+        self.assertTrue(mocked.call_args.kwargs["retry_failed"])
+
     def test_deepline_arguments_reach_live_collector(self):
         result = SimpleNamespace(
             provider="deepline", records=[], raw_payload_location="raw/deepline.json",

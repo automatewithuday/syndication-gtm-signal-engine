@@ -14,6 +14,7 @@ Account source
   -> account aggregation
   -> six-signal account priority scoring
   -> channel scoring
+  -> bounded gap target planning and Scrapling acquisition
   -> exact-run gap review resolution
   -> decision report and human QA
 ```
@@ -36,6 +37,13 @@ Each adapter returns normalized domain objects. Vendor response fields must not 
 ### Discovery
 
 Seed from the homepage, sitemap, navigation, known resource directories, SERP results, and ad destination URLs. Canonicalize URLs while retaining the original campaign URL and UTM parameters as separate observations.
+
+The gap target planner consumes only saved discovery inventory, attributable
+same-domain ad destinations, and saved search rows carrying explicit Scrapling
+provenance. It assigns deterministic structural priorities, excludes broad
+press/partner noise, caps selection, and records a hash of logical inputs.
+Previously attempted failures require an explicit retry. Cross-path redirects
+are failures because their content cannot be attributed to the requested target.
 
 ### Extraction
 

@@ -154,6 +154,16 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   deduplicate by canonical path rather than query variants, and regression-test
   that depth/page arguments reach the intended CLI branch. Prefer topical press
   detail slugs and listing-page link discovery over crawling every news item.
+- Build targeted acquisition plans from saved same-domain discovery inventory,
+  attributable ad destinations, and search rows with explicit Scrapling
+  provenance. Keep plans bounded and hash their logical inputs; processing
+  timestamps and unrelated profile mutations must not change plan identity.
+- Require channel-specific slugs before selecting press or partner detail URLs.
+  Broad press archives produce large noisy queues and consume page budgets
+  without improving gap evidence.
+- Treat a redirect to an unrelated path as a failed target, not as evidence for
+  the requested URL. Persist successful and failed attempts, exclude both from
+  automatic repeat collection, and require an explicit retry for failures.
 - When an analyst supplies an exact high-value target, require it to exist in
   the saved discovery inventory and enqueue it before ordinary targets so the
   explicit priority cannot be lost to a previously queued copy.

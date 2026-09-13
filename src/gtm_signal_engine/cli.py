@@ -57,6 +57,7 @@ from .evidence_bundle import export_evidence_bundle
 from .account_pipeline import run_account_v1
 from .unified_scoring import score_unified_account_run
 from .gap_workflow import resolve_channel_gaps
+from .gap_acquisition import acquire_gap_evidence, build_gap_target_plan
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -233,6 +234,27 @@ def build_parser() -> argparse.ArgumentParser:
     resolve_gaps.add_argument("--paid-config", type=Path)
     resolve_gaps.add_argument("--unified-config", type=Path)
     resolve_gaps.add_argument("--as-of", type=date.fromisoformat)
+    plan_gaps = subparsers.add_parser(
+        "plan-gap-evidence",
+        help="Build a provider-free target plan from saved URL, ad, and Scrapling search evidence",
+    )
+    plan_gaps.add_argument("run_dir", type=Path)
+    plan_gaps.add_argument("--maximum-targets", type=int, default=25)
+    plan_gaps.add_argument("--search-results", action="append", type=Path)
+    plan_gaps.add_argument("--retry-failed", action="store_true")
+    acquire_gaps = subparsers.add_parser(
+        "acquire-gap-evidence",
+        help="Fetch a saved target plan with Scrapling and refresh channel-gap resolution",
+    )
+    acquire_gaps.add_argument("run_dir", type=Path)
+    acquire_gaps.add_argument("--account-name")
+    acquire_gaps.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    acquire_gaps.add_argument("--maximum-targets", type=int, default=25)
+    acquire_gaps.add_argument("--maximum-pages", type=int, default=10)
+    acquire_gaps.add_argument("--maximum-depth", type=int, default=2)
+    acquire_gaps.add_argument("--delay-seconds", type=float, default=0.25)
+    acquire_gaps.add_argument("--search-results", action="append", type=Path)
+    acquire_gaps.add_argument("--retry-failed", action="store_true")
     deepline = subparsers.add_parser(
         "collect-deepline", help="Collect live Deepline/BuiltWith technology observations"
     )
@@ -553,6 +575,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             paid_config_path=args.paid_config,
             unified_config_path=args.unified_config,
             as_of=args.as_of,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    if args.command == "plan-gap-evidence":
+        result = build_gap_target_plan(
+            args.run_dir, maximum_targets=args.maximum_targets,
+            search_result_paths=args.search_results, retry_failed=args.retry_failed,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    if args.command == "acquire-gap-evidence":
+        result = acquire_gap_evidence(
+            args.run_dir, account_name=args.account_name,
+            database_path=args.database,
+            maximum_targets=args.maximum_targets, maximum_pages=args.maximum_pages,
+            maximum_depth=args.maximum_depth, delay_seconds=args.delay_seconds,
+            search_result_paths=args.search_results, retry_failed=args.retry_failed,
+            fetcher=ScraplingFetcher(),
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0

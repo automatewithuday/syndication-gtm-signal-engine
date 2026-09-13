@@ -157,6 +157,21 @@ unified, and decision-report scores. It distinguishes `review_required` from
 `insufficient_evidence`, so an empty review queue is never presented as work a
 reviewer can approve or as proof that the channel is unused.
 
+## Phase 3.6 — Targeted gap-evidence acquisition
+
+Complete for the local V1 scope. A deterministic planner merges saved
+same-domain discovery URLs, attributable ad landing pages, and explicitly
+provenanced Scrapling SERP rows into a bounded acquisition plan. The live
+collector remains Scrapling-only, rejects cross-path redirect content, and
+reruns channel-gap resolution after acquisition. Logical snapshot hashes ignore
+processing timestamps while retaining prior-attempt state. Failed URLs are not
+retried without `--retry-failed`.
+
+Real-account replay found nine relevant DailyPay targets: seven were already
+fetched and two known redirecting URLs were skipped. ColdIQ had three relevant
+targets, all already fetched. Both runs therefore made zero new requests and
+kept all three channel gaps null/`insufficient_evidence`.
+
 ## Phase 4 — Validation and learning
 
 Complete as validation infrastructure. Exact-run/content-hash review supports
@@ -194,7 +209,7 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 160 tests.
+The complete deterministic suite passes 168 tests.
 
 ## Current account-specific collection policy
 

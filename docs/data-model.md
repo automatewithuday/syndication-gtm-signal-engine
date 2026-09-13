@@ -55,6 +55,20 @@ score, evidence coverage, confidence, qualification state, and stable snapshot
 ID. The JSON result retains the upstream artifact identities; raw provider
 payloads remain outside this table.
 
+### `gap_target_plan.json`
+
+Run-local, provider-neutral acquisition plan containing canonical same-domain
+targets, deterministic priority/category, source and reason, fetched state,
+prior attempt count, last error, selection state, planner version, logical input
+hashes, and snapshot ID. Saved search inputs must identify Scrapling as their
+collection method. Processing timestamps are excluded from logical identity.
+
+### `gap_evidence_acquisition.json`
+
+Run-local acquisition outcome linking the exact plan snapshot to the targeted
+Scrapling collection and downstream gap-resolution summary. `no_targets` and
+`partial` are coverage states, not negative channel evidence.
+
 ### `gap_candidates`
 
 Stable candidate identity, account/channel, proposed signal and polarity,
