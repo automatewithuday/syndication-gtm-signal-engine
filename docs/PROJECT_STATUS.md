@@ -133,6 +133,22 @@ creative patterns, cost, evidence confidence, and blockers.
 Remote Supabase/Postgres is intentionally deferred in line with the user's
 decision to use local files and SQLite for now.
 
+## Phase 3.5 — Unified account scoring
+
+Complete for the local V1 scope. The cached company profile now feeds a
+versioned six-signal priority score covering firmographic fit, hiring, funding,
+advertising, technology, and website evidence. Scores use known-evidence
+normalization: unresolved sources are not converted to zero, and nested source
+coverage reduces both aggregate coverage and confidence. Results are persisted
+to `unified_account_scores`, written to each run, checkpointed by
+`run-account-v1`, and included in the account intelligence report.
+
+Account priority is deliberately separate from channel qualification. The
+content-syndication, retargeting, and programmatic outputs still require fit,
+readiness, gap, and trigger evidence; missing gap evidence keeps their total
+null and blocks qualification. The scoring configuration is provisional until
+outcome labels support calibration.
+
 ## Phase 4 — Validation and learning
 
 Complete as validation infrastructure. Exact-run/content-hash review supports
@@ -170,7 +186,7 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 152 tests.
+The complete deterministic suite passes 158 tests.
 
 ## Current account-specific collection policy
 

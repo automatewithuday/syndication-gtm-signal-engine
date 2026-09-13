@@ -58,19 +58,34 @@ class AccountPipelineTests(unittest.TestCase):
                 (saved / "normalized" / "job_postings.jsonl").write_text("")
                 return SimpleNamespace(incomplete=False, records=[], warnings=[])
 
+            def unified(saved, **kwargs):
+                calls.append(("unified", str(saved)))
+                score = {
+                    "scoring_version": "unified_account_v1",
+                    "priority": {"score": 75, "status": "high_priority"},
+                    "qualification": {"opportunity_status": "insufficient_evidence"},
+                }
+                _write(saved / "normalized" / "unified_account_score.json", score)
+                return score
+
             result = run_account_v1(
                 "example.com", account_name="Input Example", run_dir=run_dir,
-                company_enricher=company, jobs_collector=jobs,
+                company_enricher=company, jobs_collector=jobs, unified_scorer=unified,
             )
             self.assertEqual([
                 ("company", "example.com"),
                 ("jobs", "123", "Canonical Example"),
+                ("unified", str(run_dir)),
             ], calls)
             self.assertEqual("completed", result["pipeline"]["status"])
             reference = json.loads(
                 (run_dir / "normalized" / "company_enrichment.json").read_text()
             )
             self.assertEqual("123", reference["identifiers"]["linkedin_company_id"])
+            self.assertEqual(
+                "completed", result["pipeline"]["stages"]["unified_scoring"]["status"]
+            )
+            self.assertEqual(75, result["unified_account_score"]["priority"]["score"])
 
     def test_pipeline_runs_once_then_resumes_without_paid_calls(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -86,7 +101,7 @@ class AccountPipelineTests(unittest.TestCase):
                 _write(run_dir / "normalized" / "asset_summary.json", {
                     "substantial": {"yes": 5}, "asset_types": {"case_study": 3, "guide": 2},
                 })
-                _write(run_dir / "normalized" / "syndication_scores.json", {"score": 70})
+                _write(run_dir / "normalized" / "syndication_score.json", {"score": 70})
                 return {"run": {"status": "completed"}, "run_dir": str(run_dir)}
 
             def builtwith(saved, domain):
@@ -123,7 +138,7 @@ class AccountPipelineTests(unittest.TestCase):
             result = run_account_v1(
                 "example.com", account_name="Example", output_root=root / "runs",
                 website_runner=website, builtwith_collector=builtwith, adyntel_collector=adyntel,
-                skip_ad_platforms=("meta",),
+                skip_ad_platforms=("meta",), unified_scorer=None,
             )
             self.assertEqual("completed", result["pipeline"]["status"])
             self.assertEqual(0.4, result["provider_cost"]["credits"])
@@ -138,7 +153,7 @@ class AccountPipelineTests(unittest.TestCase):
                 "example.com", account_name="Example", run_dir=run_dir,
                 builtwith_collector=lambda *_args, **_kwargs: self.fail("BuiltWith was repurchased"),
                 adyntel_collector=lambda *_args, **_kwargs: self.fail("Adyntel was repurchased"),
-                skip_ad_platforms=("meta",),
+                skip_ad_platforms=("meta",), unified_scorer=None,
             )
             self.assertEqual("completed", resumed["pipeline"]["status"])
 
@@ -151,7 +166,7 @@ class AccountPipelineTests(unittest.TestCase):
                 "status": "completed", "fetched_pages": 1,
             })
             _write(run_dir / "normalized" / "asset_summary.json", {"substantial": {"yes": 0}, "asset_types": {}})
-            _write(run_dir / "normalized" / "syndication_scores.json", {})
+            _write(run_dir / "normalized" / "syndication_score.json", {})
             _write(run_dir / "normalized" / "deepline_collection.json", {"status": "completed", "attempts": 1})
             _write(run_dir / "normalized" / "external_profile.json", {
                 "schema_version": "1.0", "domain": "example.com", "technologies": [], "ads": [], "gap_observations": [],
@@ -168,7 +183,10 @@ class AccountPipelineTests(unittest.TestCase):
                 _write(saved / "normalized" / "apify_collection.json", {"platforms": {"meta": {"status": "SUCCEEDED"}}})
                 return SimpleNamespace(incomplete=False, records=[], warnings=[])
 
-            run_account_v1("example.com", run_dir=run_dir, apify_collector=apify)
+            run_account_v1(
+                "example.com", run_dir=run_dir, apify_collector=apify,
+                unified_scorer=None,
+            )
             self.assertEqual(["meta"], fallback)
 
 

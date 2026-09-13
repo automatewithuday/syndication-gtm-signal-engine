@@ -15,6 +15,7 @@ from .workflow import analyze_saved_run, crawl_and_analyze
 from .account_pipeline import run_account_v1
 from .company_enrichment import enrich_company
 from .job_collection import collect_deepline_jobs
+from .unified_scoring import score_unified_account_run
 
 JobRunner = Callable[..., dict[str, Any]]
 
@@ -155,7 +156,7 @@ def run_job(
                 apify_fallback=request.get("apify_fallback", True), stage_callback=stage_callback,
                 skip_ad_platforms=tuple(request.get("skip_ad_platforms", ())),
                 jobs_collector=collect_deepline_jobs, company_enricher=enrich_company,
-                database_path=database_path,
+                unified_scorer=score_unified_account_run, database_path=database_path,
             )
             final_status = report["pipeline"]["status"]
             run_dir = report["run"]["run_dir"]

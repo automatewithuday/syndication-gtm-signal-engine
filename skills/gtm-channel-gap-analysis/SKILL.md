@@ -246,6 +246,12 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   meetings/opportunities by signal and channel, not reply rate alone.
 - Export sales-ready evidence bundles only after every qualification gate passes.
   A review report for an insufficient-evidence account is not a qualified bundle.
+- Keep a six-signal account-priority score separate from channel qualification.
+  Firmographic fit, hiring, funding, advertising, technology, and website
+  evidence can rank an account for review, but they do not establish a gap.
+  When normalizing over known signals, propagate each signal's internal evidence
+  coverage into aggregate coverage and confidence instead of treating a partial
+  signal as fully observed.
 - Maintain a sanitized labeled benchmark for classifier precision. Report its
   sample size and limits; do not generalize fixture precision to the production
   population.

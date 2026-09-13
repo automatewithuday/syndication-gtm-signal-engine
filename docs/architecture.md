@@ -4,6 +4,7 @@
 
 ```text
 Account source
+  -> cached canonical company enrichment (Deepline/Prospeo)
   -> website discovery/crawl
   -> deterministic extraction
   -> raw provider collection (BuiltWith + Adyntel)
@@ -11,6 +12,7 @@ Account source
   -> creative analysis
   -> evidence ledger
   -> account aggregation
+  -> six-signal account priority scoring
   -> channel scoring
   -> decision report and human QA
 ```
@@ -46,7 +48,16 @@ Evidence is append-only by observation run. A later crawl may contradict earlier
 
 ### Scoring
 
-Score fit, readiness, gap, and trigger separately. Channel totals are configuration-driven. A high total with low evidence confidence does not qualify automatically.
+The unified account-priority layer combines firmographic fit, hiring, funding,
+advertising, technology, and website evidence using configuration-driven
+weights. Unknown signals are excluded from the numeric average while reducing
+reported evidence coverage and confidence. This priority score is a ranking
+aid, not evidence of a channel gap.
+
+Score fit, readiness, gap, and trigger separately for each channel. Channel
+totals are configuration-driven and remain null when any required component is
+unknown. A high total with low evidence confidence does not qualify
+automatically.
 
 ## Production requirements
 

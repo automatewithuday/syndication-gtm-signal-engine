@@ -893,3 +893,25 @@ coverage rather than raw page count.
 - The page was retrieved successfully with the project's Scrapling adapter
   after Parallel extraction reported insufficient credit. No alternate web
   collector was used for the source review.
+
+### 2026-09-13 — Cached profiles feed unified account scoring
+
+- Added `unified_account_v1`, a configuration-driven score over firmographic
+  fit, attributable hiring, required-source funding, advertising, technology,
+  and website evidence. The score ranks positive account priority only; it does
+  not assert a missing channel or authorize outreach.
+- Unknown signals are omitted from the normalized numeric average and reduce
+  coverage. A real ColdIQ replay exposed that partially observed inputs also
+  need proportional weight: firmographic and advertising sub-coverage now
+  flows into aggregate coverage and confidence.
+- Channel outputs remain separate fit/readiness/gap/trigger evaluations. Any
+  missing required component keeps the channel total null; positive advertising
+  or website readiness cannot fill an unknown gap.
+- Results persist in the versioned `unified_account_scores` SQLite table and in
+  `normalized/unified_account_score.json`. Snapshot identity includes the
+  scoring configuration and code-logic version plus stable upstream artifact
+  IDs, so generation timestamps do not create duplicate logical snapshots.
+- Cached replays produced DailyPay 91.7 priority, 90.0% coverage, and 74.9%
+  confidence (`high_priority`), and ColdIQ 88.6 priority, 81.2% coverage, and
+  58.9% confidence (`review`). Funding and all three channel gaps remain
+  unknown for both accounts. No paid provider calls were made.

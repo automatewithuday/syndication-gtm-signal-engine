@@ -49,6 +49,17 @@ class CliTests(unittest.TestCase):
             cli.main(["score-trigger", "run", "profile.json", "--as-of", "2026-09-11"])
         self.assertEqual(date(2026, 9, 11), mocked.call_args.kwargs["as_of"])
 
+    def test_unified_score_arguments_reach_scorer(self):
+        with patch.object(cli, "score_unified_account_run", return_value={}) as mocked, \
+             patch("builtins.print"):
+            cli.main([
+                "score-unified-account", "run", "--database", "scores.sqlite3",
+                "--as-of", "2026-09-13",
+            ])
+        self.assertEqual(Path("run"), mocked.call_args.args[0])
+        self.assertEqual(Path("scores.sqlite3"), mocked.call_args.kwargs["database_path"])
+        self.assertEqual(date(2026, 9, 13), mocked.call_args.kwargs["as_of"])
+
     def test_deepline_arguments_reach_live_collector(self):
         result = SimpleNamespace(
             provider="deepline", records=[], raw_payload_location="raw/deepline.json",
@@ -121,6 +132,7 @@ class CliTests(unittest.TestCase):
             cli.main(["run-account-v1", "coldiq.com", "--skip-ad-platform", "meta"])
         self.assertEqual(("meta",), mocked.call_args.kwargs["skip_ad_platforms"])
         self.assertIs(cli.enrich_company, mocked.call_args.kwargs["company_enricher"])
+        self.assertIs(cli.score_unified_account_run, mocked.call_args.kwargs["unified_scorer"])
         self.assertEqual(Path("data/gtm_signal_engine.sqlite3"), mocked.call_args.kwargs["database_path"])
 
     def test_company_enrichment_arguments_reach_cache_layer(self):

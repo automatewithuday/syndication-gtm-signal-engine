@@ -17,7 +17,7 @@ Version 1 is a complete local review release. It includes:
 
 - A portable coding-agent skill in `skills/gtm-channel-gap-analysis/`
 - Typed domain models and deterministic website classifiers
-- Configurable opportunity scoring
+- Configurable six-signal account priority and channel-opportunity scoring
 - A CLI and example input that run without paid APIs
 - Scrapling-only live website collection with bounded, resumable crawls
 - Prospeo-first company enrichment with a canonical SQLite account cache and
@@ -27,7 +27,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 152-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 158-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -133,6 +133,21 @@ and inspected rows remain separate, and a partial first page is a successful
 paid observation rather than a retry condition. The run writes
 `normalized/account_pipeline.json` plus
 `normalized/account_intelligence.{json,md}`.
+
+The final pipeline stage also writes `normalized/unified_account_score.json`
+and persists the same immutable snapshot in SQLite. It combines cached
+firmographics with attributable hiring, required-source funding, advertising,
+technology, and website evidence:
+
+```bash
+uv run gtm-signals score-unified-account data/runs/<run-id>
+```
+
+The six-signal priority score uses known-evidence normalization and reports
+coverage separately. It ranks accounts for review; it is not a channel-gap
+claim. Content syndication, retargeting, and programmatic remain independently
+qualified from fit, readiness, gap, and trigger components, and their totals
+stay `null` while required gap evidence is unresolved.
 
 Scrapling is the sole live web-collection provider for this project. Do not
 silently fall back to Parallel, generic browser research, curl, or another

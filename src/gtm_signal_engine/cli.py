@@ -55,6 +55,7 @@ from .validation import (
 )
 from .evidence_bundle import export_evidence_bundle
 from .account_pipeline import run_account_v1
+from .unified_scoring import score_unified_account_run
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -212,6 +213,14 @@ def build_parser() -> argparse.ArgumentParser:
     paid.add_argument("run_dir", type=Path)
     paid.add_argument("profile", type=Path)
     paid.add_argument("--config", type=Path)
+    unified = subparsers.add_parser(
+        "score-unified-account",
+        help="Score cached firmographics, hiring, funding, ads, technology, and website evidence",
+    )
+    unified.add_argument("run_dir", type=Path)
+    unified.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    unified.add_argument("--config", type=Path)
+    unified.add_argument("--as-of", type=date.fromisoformat)
     deepline = subparsers.add_parser(
         "collect-deepline", help="Collect live Deepline/BuiltWith technology observations"
     )
@@ -517,6 +526,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = score_paid_channel_run(args.run_dir, args.profile, args.config)
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
+    if args.command == "score-unified-account":
+        result = score_unified_account_run(
+            args.run_dir, database_path=args.database, config_path=args.config,
+            as_of=args.as_of,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
     if args.command == "collect-deepline":
         result = collect_deepline_technologies(args.run_dir, args.domain)
         print(json.dumps({
@@ -612,6 +628,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             jobs_collector=collect_deepline_jobs,
             company_enricher=enrich_company, database_path=args.database,
             refresh_company=args.refresh_company,
+            unified_scorer=score_unified_account_run,
         )
         print(json.dumps({
             "status": result["pipeline"]["status"], "run_dir": result["run"]["run_dir"],

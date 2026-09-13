@@ -15,6 +15,7 @@ from .gap_discovery import discover_initiative_candidates
 from .paid_gap import discover_paid_gap_candidates
 from .job_collection import collect_deepline_jobs
 from .review_queue import DEFAULT_DATABASE_PATH
+from .unified_scoring import score_unified_account_run
 from .workflow import analyze_saved_run, crawl_and_analyze
 
 StageCallback = Callable[[str, str, dict[str, Any]], None]
@@ -48,6 +49,7 @@ def run_account_v1(
     apify_collector: Collector = collect_apify_ads,
     jobs_collector: Collector | None = None,
     company_enricher: Collector | None = None,
+    unified_scorer: Collector | None = score_unified_account_run,
     database_path: Path = DEFAULT_DATABASE_PATH,
     refresh_company: bool = False,
 ) -> dict[str, Any]:
@@ -124,6 +126,9 @@ def run_account_v1(
             "firmographics": company_profile["firmographics"],
             "funding": company_profile["funding"],
             "downstream_keys": company_profile["downstream_keys"],
+            "field_provenance": company_profile.get("field_provenance", {}),
+            "source_snapshots": company_profile.get("source_snapshots", []),
+            "request_policy": company_profile.get("request_policy", {}),
             "last_enriched_at": company_profile["last_enriched_at"],
             "current_run_billing": company_profile.get("current_run_billing", []),
         }
@@ -279,6 +284,19 @@ def run_account_v1(
     else:
         state["blockers"].append("Paid scoring unavailable: normalized external profile is missing")
         checkpoint("paid_scoring", "partial", {"reason": "external profile missing"})
+
+    if unified_scorer is not None:
+        unified = unified_scorer(run_dir, database_path=database_path)
+        checkpoint("unified_scoring", "completed", {
+            "scoring_version": unified["scoring_version"],
+            "priority_score": unified["priority"]["score"],
+            "priority_status": unified["priority"]["status"],
+            "opportunity_status": unified["qualification"]["opportunity_status"],
+        })
+    else:
+        checkpoint("unified_scoring", "skipped", {
+            "reason": "no unified scorer supplied by this library caller",
+        })
 
     state["blockers"] = list(dict.fromkeys(state["blockers"]))
     state["status"] = "partial" if state["blockers"] else "completed"

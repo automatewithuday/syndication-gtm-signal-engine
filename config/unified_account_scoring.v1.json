@@ -1,0 +1,128 @@
+{
+  "version": "unified_account_v1",
+  "score_mode": "known_evidence_normalized",
+  "priority_weights": {
+    "firmographic_fit": 0.25,
+    "hiring": 0.15,
+    "funding": 0.10,
+    "advertising": 0.20,
+    "technology": 0.10,
+    "website": 0.20
+  },
+  "firmographic_fit": {
+    "source_weights": {
+      "reviewed_account_fit": 0.70,
+      "provider_commercial_scale": 0.30
+    },
+    "headcount_tiers": [
+      {"minimum": 1, "score": 10},
+      {"minimum": 21, "score": 45},
+      {"minimum": 51, "score": 65},
+      {"minimum": 201, "score": 85},
+      {"minimum": 1001, "score": 100}
+    ],
+    "revenue_tiers": [
+      {"minimum": 1000000, "score": 40},
+      {"minimum": 10000000, "score": 60},
+      {"minimum": 50000000, "score": 80},
+      {"minimum": 250000000, "score": 100}
+    ],
+    "provider_confidence": 0.85,
+    "minimum_score": 60,
+    "minimum_confidence": 0.60
+  },
+  "hiring": {
+    "role_scores": {
+      "demand_generation": 90,
+      "gtm_engineering": 80
+    },
+    "initiative_scores": {
+      "active_demand_generation_hiring": 90,
+      "active_gtm_hiring": 80,
+      "active_marketing_hiring": 70
+    },
+    "freshness_credit": {
+      "within_90_days": 1.0,
+      "within_180_days": 0.85,
+      "within_365_days": 0.65,
+      "older": 0.35,
+      "unknown": 0.50
+    },
+    "additional_distinct_signal_bonus": 10,
+    "minimum_score": 60,
+    "minimum_confidence": 0.60,
+    "unknown_date_confidence_cap": 0.65
+  },
+  "funding": {
+    "base_score": 85,
+    "freshness_credit": {
+      "within_90_days": 1.0,
+      "within_180_days": 0.85,
+      "within_365_days": 0.65,
+      "older": 0.35,
+      "unknown": 0.50
+    },
+    "minimum_score": 50,
+    "minimum_confidence": 0.70,
+    "unknown_date_confidence_cap": 0.60
+  },
+  "advertising": {
+    "factor_weights": {
+      "ad_inventory": 30,
+      "platform_diversity": 25,
+      "current_or_recent_creatives": 25,
+      "analyzable_ads": 20
+    },
+    "full_at": {
+      "ad_inventory": 100,
+      "platform_diversity": 3,
+      "current_or_recent_creatives": 10,
+      "analyzable_ads": 10
+    },
+    "minimum_score": 60,
+    "minimum_confidence": 0.60
+  },
+  "technology": {
+    "factor_weights": {
+      "relevant_marketing_technologies": 60,
+      "category_diversity": 40
+    },
+    "full_at": {
+      "relevant_marketing_technologies": 5,
+      "category_diversity": 10
+    },
+    "category_markers": [
+      "advertiser tracking",
+      "conversion tracking",
+      "retargeting",
+      "remarketing",
+      "audience",
+      "tag management",
+      "customer data platform",
+      "data management platform",
+      "identity resolution",
+      "marketing automation",
+      "analytics",
+      "email marketing"
+    ],
+    "minimum_score": 60,
+    "minimum_confidence": 0.60
+  },
+  "channel_component_weights": {
+    "fit": 0.30,
+    "readiness": 0.25,
+    "gap": 0.25,
+    "trigger": 0.20
+  },
+  "qualification": {
+    "minimum_priority_score": 65,
+    "minimum_priority_coverage": 0.75,
+    "minimum_priority_confidence": 0.60,
+    "minimum_channel_total": 60,
+    "minimum_channel_confidence": 0.60
+  },
+  "calibration": {
+    "status": "provisional_unlabeled",
+    "note": "Initial unified weights are behavior checks against real accounts, not outcome-calibrated qualification thresholds."
+  }
+}

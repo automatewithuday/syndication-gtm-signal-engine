@@ -47,6 +47,14 @@ outside this model and are referenced by path and SHA-256.
 
 Channel, fit, readiness, gap, trigger, total, confidence, scoring version, reasons, risks, and evidence snapshot ID.
 
+### `unified_account_scores`
+
+Immutable account-priority snapshots keyed by account and run. Each row stores
+the configuration version, scoring-logic version, six-signal result, priority
+score, evidence coverage, confidence, qualification state, and stable snapshot
+ID. The JSON result retains the upstream artifact identities; raw provider
+payloads remain outside this table.
+
 ### `gap_candidates`
 
 Stable candidate identity, account/channel, proposed signal and polarity,

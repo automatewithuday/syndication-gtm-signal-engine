@@ -77,7 +77,7 @@ def build_account_intelligence_report(
     manifest = _load(run_dir / "manifest.json")
     assets = _load(run_dir / "normalized" / "asset_summary.json")
     asset_rows = _load_jsonl(run_dir / "normalized" / "assets.jsonl")
-    syndication = _load(run_dir / "normalized" / "syndication_scores.json")
+    syndication = _load(run_dir / "normalized" / "syndication_score.json")
     profile = _load(run_dir / "normalized" / "external_profile.json")
     builtwith = _load(run_dir / "normalized" / "deepline_collection.json")
     adyntel = _load(run_dir / "normalized" / "adyntel_collection.json")
@@ -89,6 +89,7 @@ def build_account_intelligence_report(
     job_collection = _load(run_dir / "normalized" / "job_collection.json")
     job_postings = _load_jsonl(run_dir / "normalized" / "job_postings.jsonl")
     company_enrichment = _load(run_dir / "normalized" / "company_enrichment.json")
+    unified_score = _load(run_dir / "normalized" / "unified_account_score.json")
     pipeline = _load(run_dir / "normalized" / "account_pipeline.json")
     domain = (urlsplit(str(manifest.get("seed_url", ""))).hostname or profile.get("domain") or "").removeprefix("www.")
 
@@ -200,6 +201,7 @@ def build_account_intelligence_report(
             }),
         },
         "company_enrichment": company_enrichment or None,
+        "unified_account_score": unified_score or None,
         "paid_gap_candidates": gap_candidates or None,
         "top_creatives": top_creatives,
         "blockers": list(dict.fromkeys(blockers)),
@@ -231,6 +233,25 @@ def build_account_intelligence_report(
             f"- Revenue range: {revenue_display}",
             f"- Industry: {firmographics.get('industry') or 'unknown'}", "",
         ])
+    if unified_score:
+        priority = unified_score.get("priority", {})
+        lines.extend([
+            "## Unified account score", "",
+            f"- Priority score: {priority.get('score', 'unknown')}",
+            f"- Evidence coverage: {float(priority.get('evidence_coverage') or 0):.0%}",
+            f"- Confidence: {float(priority.get('confidence') or 0):.0%}",
+            f"- Priority status: {priority.get('status', 'unknown')}",
+            f"- Opportunity status: {unified_score.get('qualification', {}).get('opportunity_status', 'unknown')}",
+            "- Priority is not a channel-gap claim or outreach authorization.", "",
+            "| Signal | Score | State | Confidence |", "|---|---:|---|---:|",
+        ])
+        for signal, detail in unified_score.get("signals", {}).items():
+            lines.append(
+                f"| {signal.replace('_', ' ').title()} | "
+                f"{detail.get('score') if detail.get('score') is not None else 'unknown'} | "
+                f"{detail.get('state', 'unknown')} | {float(detail.get('confidence') or 0):.0%} |"
+            )
+        lines.append("")
     lines.extend([
         "## Paid advertising", "",
         "| Channel | Adyntel | Total ads | Adyntel inspected | Fallback | Fallback inspected | Evidence state |", "|---|---:|---:|---:|---:|---:|---:|",
