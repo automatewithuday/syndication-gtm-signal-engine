@@ -17,13 +17,35 @@ class JobTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             batch = root / "accounts.jsonl"
-            batch.write_text(json.dumps({"domain": "example.com", "account_name": "Example", "maximum_pages": 5}) + "\n")
+            batch.write_text(json.dumps({
+                "domain": "example.com", "account_name": "Example", "maximum_pages": 5,
+                "gap_evidence_pages": 6, "gap_evidence_targets": 12,
+                "gap_evidence_depth": 3, "retry_gap_evidence": True,
+            }) + "\n")
             database = root / "jobs.sqlite3"
             first = enqueue_batch(batch, database)
             second = enqueue_batch(batch, database)
             self.assertEqual(1, first["inserted"])
             self.assertEqual(1, second["existing"])
-            self.assertEqual(1, len(list_jobs(database)))
+            jobs = list_jobs(database)
+            self.assertEqual(1, len(jobs))
+            self.assertEqual(6, jobs[0]["request"]["gap_evidence_pages"])
+            self.assertEqual(12, jobs[0]["request"]["gap_evidence_targets"])
+            self.assertEqual(3, jobs[0]["request"]["gap_evidence_depth"])
+            self.assertTrue(jobs[0]["request"]["retry_gap_evidence"])
+            self.assertEqual("account_job_v2", jobs[0]["request"]["request_version"])
+            self.assertEqual("account_pipeline_v2", jobs[0]["request"]["pipeline_version"])
+
+    def test_batch_rejects_ambiguous_boolean_policy(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            batch = root / "accounts.jsonl"
+            batch.write_text(
+                '{"domain":"example.com","retry_gap_evidence":"sometimes"}\n'
+            )
+
+            with self.assertRaisesRegex(ValueError, "retry_gap_evidence must be"):
+                enqueue_batch(batch, root / "jobs.sqlite3")
 
     def test_job_records_partial_run_and_skips_only_completed(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -73,11 +95,19 @@ class JobTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             batch = root / "accounts.jsonl"
-            batch.write_text('{"domain":"example.com"}\n')
+            batch.write_text(json.dumps({
+                "domain": "example.com", "gap_evidence_pages": 4,
+                "gap_evidence_targets": 8, "gap_evidence_depth": 3,
+                "retry_gap_evidence": True,
+            }) + "\n")
             database = root / "jobs.sqlite3"
             job_id = enqueue_batch(batch, database)["job_ids"][0]
 
             def pipeline(domain, **kwargs):
+                self.assertEqual(4, kwargs["gap_evidence_pages"])
+                self.assertEqual(8, kwargs["gap_evidence_targets"])
+                self.assertEqual(3, kwargs["gap_evidence_depth"])
+                self.assertTrue(kwargs["retry_gap_evidence"])
                 kwargs["stage_callback"]("builtwith", "completed", {"records": 3})
                 kwargs["stage_callback"]("adyntel", "partial", {"platforms": {"meta": "partial"}})
                 return {

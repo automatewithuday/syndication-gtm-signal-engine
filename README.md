@@ -27,7 +27,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 170-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 171-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -527,6 +527,22 @@ uv run gtm-signals list-jobs --status pending
 uv run gtm-signals run-pending-jobs --workers 2
 uv run gtm-signals run-job <job-id>
 ```
+
+Each CSV/JSONL row accepts the single-account crawl fields plus
+`linkedin_company_id`, `apify_fallback`, comma-separated
+`skip_ad_platforms`, `gap_evidence_pages`, `gap_evidence_targets`,
+`gap_evidence_depth`, and `retry_gap_evidence`. For example:
+
+```json
+{"domain":"dailypay.com","account_name":"DailyPay","maximum_pages":100,"gap_evidence_pages":10,"gap_evidence_targets":25,"gap_evidence_depth":2,"retry_gap_evidence":false}
+```
+
+See `examples/accounts.v2.jsonl` for DailyPay and ColdIQ rows. Boolean policy
+values must be `true`/`false`, `yes`/`no`, or `1`/`0`; ambiguous values are
+rejected. The normalized request stores `account_job_v2` and
+`account_pipeline_v2`, and its complete JSON becomes the idempotency key. This
+makes a batch's collection budgets and retry authority reproducible rather than
+depending on CLI defaults at execution time.
 
 Record validation and downstream outcomes without sending outreach:
 

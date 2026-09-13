@@ -982,3 +982,18 @@ coverage rather than raw page count.
   acquisition stages returned `no_targets`; gap resolution remained
   `insufficient_evidence` rather than creating a zero score.
 - Validation: `docs/validation/2026-09-13-account-pipeline-gap-acquisition.md`.
+
+### 2026-09-13 — Batch jobs preserve the complete acquisition contract
+
+- The batch runner already called `run_account_v1`, but its normalized request
+  omitted all targeted gap-acquisition settings. A queued account therefore
+  could not reproduce the equivalent single-account command.
+- Added `account_job_v2` with the current pipeline version, page/target/depth
+  budgets, and retry policy inside the hashed request. The runner forwards the
+  stored values to `account_pipeline_v2`; legacy requests use safe defaults.
+- Boolean collection authority is parsed strictly. Ambiguous CSV text is
+  rejected instead of accidentally enabling a paid fallback or failed-target
+  retry.
+- Added a real-company example batch for DailyPay and ColdIQ. ColdIQ retains
+  the user-directed Meta exclusion as request policy, not a zero observation.
+- Validation: `docs/validation/2026-09-13-batch-gap-policy.md`.

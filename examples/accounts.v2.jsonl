@@ -1,0 +1,2 @@
+{"account_name":"DailyPay","apify_fallback":true,"delay_seconds":0.25,"domain":"dailypay.com","gap_evidence_depth":2,"gap_evidence_pages":10,"gap_evidence_targets":25,"maximum_pages":100,"maximum_sitemaps":20,"retry_gap_evidence":false,"skip_ad_platforms":""}
+{"account_name":"ColdIQ","apify_fallback":false,"delay_seconds":0.25,"domain":"coldiq.com","gap_evidence_depth":2,"gap_evidence_pages":10,"gap_evidence_targets":25,"maximum_pages":100,"maximum_sitemaps":20,"retry_gap_evidence":false,"skip_ad_platforms":"meta"}

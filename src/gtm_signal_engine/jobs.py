@@ -12,16 +12,31 @@ from urllib.parse import urlsplit
 from .collector import normalize_seed
 from .review_queue import DEFAULT_DATABASE_PATH, connect_database
 from .workflow import analyze_saved_run, crawl_and_analyze
-from .account_pipeline import run_account_v1
+from .account_pipeline import PIPELINE_VERSION, run_account_v1
 from .company_enrichment import enrich_company
 from .job_collection import collect_deepline_jobs
 from .unified_scoring import score_unified_account_run
 
 JobRunner = Callable[..., dict[str, Any]]
+JOB_REQUEST_VERSION = "account_job_v2"
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _boolean(record: dict[str, Any], key: str, default: bool) -> bool:
+    value = record.get(key)
+    if value in (None, ""):
+        return default
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().casefold()
+    if normalized in {"1", "true", "yes"}:
+        return True
+    if normalized in {"0", "false", "no"}:
+        return False
+    raise ValueError(f"{key} must be true/false, yes/no, or 1/0")
 
 
 def _request(record: dict[str, Any]) -> dict[str, Any]:
@@ -33,15 +48,30 @@ def _request(record: dict[str, Any]) -> dict[str, Any]:
     ]
     if set(skip_ad_platforms).difference({"meta", "linkedin", "google"}):
         raise ValueError("skip_ad_platforms must be a comma-separated subset of meta, linkedin, google")
+    gap_evidence_pages = int(record.get("gap_evidence_pages") or 0)
+    gap_evidence_targets = int(record.get("gap_evidence_targets") or 25)
+    gap_evidence_depth = int(record.get("gap_evidence_depth") or 2)
+    if gap_evidence_pages < 0:
+        raise ValueError("gap_evidence_pages cannot be negative")
+    if gap_evidence_targets < 1:
+        raise ValueError("gap_evidence_targets must be at least 1")
+    if gap_evidence_depth < 1:
+        raise ValueError("gap_evidence_depth must be at least 1")
     return {
+        "request_version": JOB_REQUEST_VERSION,
+        "pipeline_version": PIPELINE_VERSION,
         "domain": domain,
         "account_name": str(record.get("account_name") or domain),
         "maximum_pages": int(record.get("maximum_pages") or 100),
         "maximum_sitemaps": int(record.get("maximum_sitemaps") or 20),
         "delay_seconds": float(record.get("delay_seconds") or 0.25),
         "linkedin_company_id": str(record.get("linkedin_company_id") or "") or None,
-        "apify_fallback": str(record.get("apify_fallback", "true")).strip().lower() not in {"0", "false", "no"},
+        "apify_fallback": _boolean(record, "apify_fallback", True),
         "skip_ad_platforms": list(dict.fromkeys(skip_ad_platforms)),
+        "gap_evidence_pages": gap_evidence_pages,
+        "gap_evidence_targets": gap_evidence_targets,
+        "gap_evidence_depth": gap_evidence_depth,
+        "retry_gap_evidence": _boolean(record, "retry_gap_evidence", False),
     }
 
 
@@ -155,6 +185,10 @@ def run_job(
                 delay_seconds=request["delay_seconds"], linkedin_company_id=request.get("linkedin_company_id"),
                 apify_fallback=request.get("apify_fallback", True), stage_callback=stage_callback,
                 skip_ad_platforms=tuple(request.get("skip_ad_platforms", ())),
+                gap_evidence_pages=int(request.get("gap_evidence_pages", 0)),
+                gap_evidence_targets=int(request.get("gap_evidence_targets", 25)),
+                gap_evidence_depth=int(request.get("gap_evidence_depth", 2)),
+                retry_gap_evidence=bool(request.get("retry_gap_evidence", False)),
                 jobs_collector=collect_deepline_jobs, company_enricher=enrich_company,
                 unified_scorer=score_unified_account_run, database_path=database_path,
             )

@@ -168,6 +168,10 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   normalization and before exact-run gap resolution. Require an explicit page
   budget, persist all caps and retry intent, and defer scoring to the pipeline's
   single resolver stage so dependent scores are not rebuilt twice.
+- Normalize every batch row into a versioned request whose hash includes the
+  pipeline version, provider exclusions, collection budgets, and retry intent.
+  Reject ambiguous boolean policy and let legacy jobs default to no additional
+  gap acquisition rather than inheriting new live-request behavior.
 - When an analyst supplies an exact high-value target, require it to exist in
   the saved discovery inventory and enqueue it before ordinary targets so the
   explicit priority cannot be lost to a previously queued copy.

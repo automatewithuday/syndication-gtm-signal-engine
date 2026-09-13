@@ -186,6 +186,15 @@ provider calls, and `insufficient_evidence` channel gaps. The integration test
 also exposed and fixed a missing `discover_gap_candidates` import that could
 crash a pipeline run once normalized pages were present.
 
+## Phase 3.8 — Reproducible batch acquisition policy
+
+Complete for the local V1 scope. CSV/JSONL jobs now persist the targeted-gap
+page, target, and depth budgets plus explicit failed-target retry intent and
+forward them to `account_pipeline_v2`. `account_job_v2` includes the pipeline
+version in the hashed normalized request, so the job identity captures the
+execution contract. Ambiguous boolean values are rejected during enqueue.
+Legacy saved jobs remain executable with safe zero-acquisition defaults.
+
 ## Phase 4 — Validation and learning
 
 Complete as validation infrastructure. Exact-run/content-hash review supports
@@ -223,7 +232,7 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 170 tests.
+The complete deterministic suite passes 171 tests.
 
 ## Current account-specific collection policy
 

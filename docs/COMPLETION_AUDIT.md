@@ -89,7 +89,7 @@ is ready to learn once authorized campaigns generate a meaningful sample.
 
 ## Verification record
 
-- Full suite: 170 tests passed in the latest verification run; paid APIs are
+- Full suite: 171 tests passed in the latest verification run; paid APIs are
   replaced by recorded payloads or fakes in tests.
 - Python compile check and `git diff --check`: pass.
 - Wheel build: pass.
