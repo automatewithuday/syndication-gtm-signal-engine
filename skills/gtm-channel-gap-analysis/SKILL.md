@@ -207,6 +207,11 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   structured funding source. Do not relabel Aviato, another aggregator, or a
   first-party announcement as Crunchbase. Company press releases may corroborate
   funding but are not a substitute for the requested Crunchbase source.
+- Discover that contract from the live Deepline catalog and require the provider
+  field to equal `crunchbase`, then inspect its live input schema before use.
+  Persist the catalog response and provider payload with hashes. If unavailable,
+  save `blocked_provider_unavailable`; retry funding independently from the
+  cached company so a retry never repurchases Prospeo.
 - Preserve a source date only when it is attributable to the saved page through
   publication metadata or an unambiguous page date. Relative copy such as
   “soon” is not a publication date; retain the observation time and leave the

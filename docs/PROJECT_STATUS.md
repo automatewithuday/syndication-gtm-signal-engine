@@ -16,8 +16,11 @@ The canonical record supplies domain keys to Scrapling, BuiltWith, Adyntel, and
 Google search, plus the numeric LinkedIn company ID to LinkedIn Jobs. Prospeo
 returned 44 employees for ColdIQ and 987 for DailyPay; DailyPay also returned a
 $250M-$500M revenue range. Prospeo funding observations are retained only as
-non-authoritative context. Funding remains partial until a callable Crunchbase
-contract is available through Deepline.
+non-authoritative context. Initial enrichment now searches Deepline's live tool
+catalog for a connected provider whose exact identity is Crunchbase, persists
+the catalog response, and normalizes attributable funding when such a contract
+exists. A funding-only refresh reuses the cached company and never calls
+Prospeo. Funding remains partial until that exact provider becomes available.
 
 ## Phase 1 — Website intelligence MVP
 
@@ -59,9 +62,11 @@ and one DailyPay Senior Growth Marketing Manager, Acquisition & Paid role.
 DailyPay's verified LinkedIn company ID (`10497554`) produced zero matching
 LinkedIn roles in the bounded last-month query, while its Google Jobs result was
 preserved; external job coverage is complete for both pilot accounts.
-Crunchbase through Deepline is the required primary funding source, but no
-callable Crunchbase contract is exposed in the current workspace; Aviato is not
-used as a mislabeled substitute.
+Crunchbase through Deepline is the required primary funding source. A live
+catalog check on 2026-09-13 found callable Aviato and LeadMagic alternatives but
+no exact Crunchbase provider. DailyPay and ColdIQ now retain the catalog payload
+and hash with `blocked_provider_unavailable`; neither alternative is used as a
+mislabeled substitute and the check incurred no provider charge.
 
 A native Deepline CLI integration is live-validated against the managed
 BuiltWith provider for DailyPay and ColdIQ. It inspects the provider contract
@@ -244,7 +249,7 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 175 tests.
+The complete deterministic suite passes 180 tests.
 
 ## Current account-specific collection policy
 

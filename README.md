@@ -88,12 +88,17 @@ again. Inspect or explicitly refresh the account cache with:
 uv run gtm-signals enrich-company example.com --account-name Example
 uv run gtm-signals show-company example.com
 uv run gtm-signals enrich-company example.com --refresh
+uv run gtm-signals enrich-company-funding example.com
 ```
 
 Refresh is explicit because it may make another paid Prospeo request. Raw
 provider envelopes live outside the core database and are referenced by their
 path and SHA-256 hash from append-only enrichment snapshots. The SQLite account
 row stores only the normalized company profile and field provenance.
+`enrich-company-funding` rechecks Deepline's live catalog and refreshes only
+Crunchbase funding for a cached company, so it never repurchases Prospeo. The
+command accepts only a connected tool whose provider is exactly `crunchbase`;
+other aggregators remain visible in the catalog snapshot but are not substituted.
 
 For an already-known domain, use `prospeo_enrich_company`; do not run a company
 search merely to recover the same firmographics. Prospeo's
@@ -320,9 +325,11 @@ Google job-board rows must match the exact employer name or employer domain.
 Corrective single-source runs preserve previously collected sources and their
 normalized records, so adding a LinkedIn ID does not rebuy Google Jobs data.
 The replay command hash-checks saved responses and never makes a paid call.
-Crunchbase-through-Deepline is the required structured funding source; the
-current workspace does not expose that callable contract, so first-party press
-announcements remain corroboration rather than a Crunchbase substitute.
+Crunchbase-through-Deepline is the required structured funding source. The
+2026-09-13 live catalog check exposed Aviato and LeadMagic funding tools but no
+callable exact Crunchbase provider, so funding is persisted as blocked with the
+catalog hash. First-party press announcements remain corroboration rather than
+a Crunchbase substitute.
 
 Persist and review initiative candidates separately from the gap queue:
 

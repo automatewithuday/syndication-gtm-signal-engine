@@ -213,6 +213,29 @@ class CliTests(unittest.TestCase):
         self.assertTrue(mocked.call_args.kwargs["refresh"])
         self.assertEqual(Path("custom.sqlite3"), mocked.call_args.kwargs["database_path"])
 
+    def test_company_funding_refresh_uses_dedicated_command(self):
+        result = {"domain": "example.com", "funding": {"status": "completed"}}
+        with patch.object(cli, "enrich_company_funding", return_value=result) as mocked, \
+             patch("builtins.print"):
+            exit_code = cli.main([
+                "enrich-company-funding", "example.com",
+                "--database", "custom.sqlite3", "--output-dir", "company-data",
+            ])
+        self.assertEqual(0, exit_code)
+        self.assertEqual("example.com", mocked.call_args.args[0])
+        self.assertEqual(Path("custom.sqlite3"), mocked.call_args.kwargs["database_path"])
+        self.assertEqual(Path("company-data"), mocked.call_args.kwargs["output_root"])
+
+    def test_company_funding_refresh_reports_unresolved_exit(self):
+        result = {
+            "domain": "example.com",
+            "funding": {"status": "blocked_provider_unavailable"},
+        }
+        with patch.object(cli, "enrich_company_funding", return_value=result), \
+             patch("builtins.print"):
+            exit_code = cli.main(["enrich-company-funding", "example.com"])
+        self.assertEqual(1, exit_code)
+
 
 if __name__ == "__main__":
     unittest.main()

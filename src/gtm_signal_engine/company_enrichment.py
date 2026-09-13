@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from .external_collection import (
     DeeplineCliRunner,
@@ -15,9 +16,10 @@ from .external_collection import (
 )
 from .review_queue import DEFAULT_DATABASE_PATH, connect_database
 
-ENRICHMENT_VERSION = "account_company_enrichment_v1"
+ENRICHMENT_VERSION = "account_company_enrichment_v2"
 PROSPEO_TOOL_ID = "prospeo_enrich_company"
 IDENTITY_TOOL_ID = "crustdata_v3_company_identify"
+FUNDING_DISCOVERY_VERSION = "deepline_crunchbase_discovery_v1"
 
 
 def _now() -> str:
@@ -86,6 +88,239 @@ def _identity_from_crustdata(payload: Any, domain: str) -> dict[str, Any]:
     if not candidates:
         raise ValueError("Crustdata did not return an exact domain identity")
     return max(candidates, key=lambda item: item[0])[1]
+
+
+def _crunchbase_tool(
+    runner: DeeplineCliRunner,
+) -> tuple[dict[str, Any] | None, dict[str, Any], bytes]:
+    catalog, raw = _run_json(
+        runner, ["tools", "search", "crunchbase", "--json"]
+    )
+    tools = catalog.get("tools", [])
+    if not isinstance(tools, list):
+        raise ValueError("Deepline tool search did not return a tools list")
+    matches = [
+        item for item in tools
+        if isinstance(item, dict)
+        and str(item.get("provider", "")).casefold() == "crunchbase"
+        and item.get("connected") is True
+        and bool(item.get("executeCommand"))
+    ]
+    if not matches:
+        return None, catalog, raw
+    selected = sorted(matches, key=lambda item: str(item.get("toolId", "")))[0]
+    tool_id = str(selected.get("toolId") or selected.get("id") or "")
+    if not tool_id:
+        raise ValueError("Deepline Crunchbase catalog row lacks a tool ID")
+    contract, _ = _run_json(runner, ["tools", "describe", tool_id, "--json"])
+    if (
+        contract.get("toolId") != tool_id
+        or contract.get("callable") is not True
+        or contract.get("connected") is not True
+        or str(contract.get("provider", "")).casefold() != "crunchbase"
+    ):
+        raise ValueError("live Deepline Crunchbase tool is not callable and connected")
+    return contract, catalog, raw
+
+
+def _funding_input(
+    contract: dict[str, Any], domain: str, crunchbase_url: str | None,
+) -> dict[str, str]:
+    properties = contract.get("inputSchema", {}).get("jsonSchema", {}).get("properties", {})
+    if crunchbase_url:
+        for field in ("crunchbase_url", "organization_url", "company_url"):
+            if field in properties:
+                return {field: crunchbase_url}
+    for field in ("company_domain", "domain", "company_website", "website"):
+        if field in properties:
+            return {field: domain}
+    raise ValueError("live Deepline Crunchbase contract lacks a supported company identifier")
+
+
+def _number(value: Any) -> float | None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    if isinstance(value, dict):
+        for key in ("usd", "value", "amount"):
+            if key in value:
+                return _number(value[key])
+    return None
+
+
+def _canonical_source_url(value: str) -> tuple[str, str]:
+    parsed = urlsplit(value if "://" in value else f"https://{value}")
+    host = (parsed.hostname or "").casefold()
+    if host.startswith("www."):
+        host = host[4:]
+    return host, parsed.path.rstrip("/").casefold()
+
+
+def _normalize_crunchbase_funding(
+    payload: Any, *, domain: str, crunchbase_url: str | None,
+    provider_tool: str, observed_at: str,
+) -> dict[str, Any]:
+    value = payload
+    if isinstance(value, list):
+        if len(value) != 1 or not isinstance(value[0], dict):
+            raise ValueError("Crunchbase response must identify exactly one company")
+        value = value[0]
+    if not isinstance(value, dict):
+        raise ValueError("Crunchbase response does not contain a company object")
+    for key in ("organization", "company", "data", "result"):
+        if isinstance(value.get(key), dict):
+            value = value[key]
+            break
+    returned_domain = _domain(str(
+        value.get("domain") or value.get("website") or value.get("website_url") or ""
+    ))
+    returned_crunchbase_url = str(
+        value.get("crunchbase_url") or value.get("permalink_url") or value.get("url") or ""
+    ) or None
+    if returned_domain:
+        if returned_domain != domain:
+            raise ValueError("Crunchbase returned a different company domain")
+    elif crunchbase_url and returned_crunchbase_url:
+        if _canonical_source_url(returned_crunchbase_url) != _canonical_source_url(crunchbase_url):
+            raise ValueError("Crunchbase returned a different organization URL")
+    else:
+        raise ValueError("Crunchbase response lacks an attributable company identity")
+    rounds = value.get("funding_rounds") or value.get("rounds") or []
+    if not isinstance(rounds, list):
+        rounds = []
+    normalized_rounds = []
+    for item in rounds:
+        if not isinstance(item, dict):
+            continue
+        normalized_rounds.append({
+            "announced_at": item.get("announced_at") or item.get("announced_on") or item.get("date"),
+            "round_type": item.get("round_type") or item.get("funding_type") or item.get("stage"),
+            "amount_usd": _number(
+                item.get("amount_usd") or item.get("money_raised_usd") or item.get("amount")
+            ),
+            "source_url": item.get("source_url") or item.get("url"),
+        })
+    dated_rounds = [item for item in normalized_rounds if item["announced_at"]]
+    latest = max(dated_rounds, key=lambda item: str(item["announced_at"])) if dated_rounds else {}
+    return {
+        "provider": "crunchbase_via_deepline",
+        "provider_tool": provider_tool,
+        "company_domain": domain,
+        "source_url": returned_crunchbase_url or crunchbase_url,
+        "total_funding_usd": _number(
+            value.get("total_funding_usd") or value.get("funding_total_usd")
+            or value.get("total_funding")
+        ),
+        "round_count": len(normalized_rounds),
+        "latest_funding_date": (
+            latest.get("announced_at") or value.get("latest_funding_date")
+            or value.get("last_funding_date")
+        ),
+        "latest_round_type": latest.get("round_type") or value.get("latest_round_type"),
+        "latest_round_amount_usd": (
+            latest.get("amount_usd") or _number(value.get("latest_round_amount_usd"))
+        ),
+        "rounds": normalized_rounds,
+        "observed_at": observed_at,
+        "confidence": 0.9,
+        "method": "deepline_crunchbase_v1",
+        "normalizer_version": FUNDING_DISCOVERY_VERSION,
+    }
+
+
+def _funding_discovery_snapshot(
+    *, catalog: dict[str, Any], raw: bytes, domain: str,
+    output_root: Path, observed_at: str,
+) -> dict[str, Any]:
+    """Persist the exact tool catalog used to decide Crunchbase availability."""
+    return _write_snapshot(
+        envelope=catalog, raw=raw, domain=domain, provider="deepline-tool-catalog",
+        tool_id="tools_search_crunchbase",
+        output_root=output_root, observed_at=observed_at,
+    )
+
+
+def _collect_funding(
+    *, domain: str, crunchbase_url: str | None, runner: DeeplineCliRunner,
+    output_root: Path, observed_at: str,
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+    snapshots: list[dict[str, Any]] = []
+    billing: list[dict[str, Any]] = []
+    try:
+        contract, catalog, catalog_raw = _crunchbase_tool(runner)
+    except Exception as exc:
+        return ({
+            "required_provider": "crunchbase_via_deepline",
+            "status": "provider_discovery_failed",
+            "error": f"{type(exc).__name__}: {exc}",
+            "observed_at": observed_at,
+            "discovery_version": FUNDING_DISCOVERY_VERSION,
+        }, snapshots, billing)
+
+    discovery_snapshot = _funding_discovery_snapshot(
+        catalog=catalog, raw=catalog_raw, domain=domain,
+        output_root=output_root, observed_at=observed_at,
+    )
+    snapshots.append(discovery_snapshot)
+    if contract is None:
+        return ({
+            "required_provider": "crunchbase_via_deepline",
+            "status": "blocked_provider_unavailable",
+            "interpretation": (
+                "No callable, connected Deepline tool whose provider is exactly Crunchbase "
+                "was available; alternative funding providers were not substituted."
+            ),
+            "observed_at": observed_at,
+            "discovery_version": FUNDING_DISCOVERY_VERSION,
+            "catalog_response_sha256": discovery_snapshot["response_sha256"],
+        }, snapshots, billing)
+
+    tool_id = str(contract["toolId"])
+    try:
+        request = _funding_input(contract, domain, crunchbase_url)
+        envelope, raw = _run_json(runner, [
+            "tools", "execute", tool_id, "--input",
+            json.dumps(request, separators=(",", ":")), "--json",
+        ])
+    except Exception as exc:
+        return ({
+            "required_provider": "crunchbase_via_deepline",
+            "provider_tool": tool_id,
+            "status": "provider_error",
+            "error": f"{type(exc).__name__}: {exc}",
+            "observed_at": observed_at,
+            "discovery_version": FUNDING_DISCOVERY_VERSION,
+        }, snapshots, billing)
+
+    provider_snapshot = _write_snapshot(
+        envelope=envelope, raw=raw, domain=domain, provider="crunchbase",
+        tool_id=tool_id, output_root=output_root, observed_at=observed_at,
+    )
+    snapshots.append(provider_snapshot)
+    if provider_snapshot.get("billing"):
+        billing.append({"provider": "crunchbase", "billing": provider_snapshot["billing"]})
+    try:
+        normalized = _normalize_crunchbase_funding(
+            _tool_payload(envelope), domain=domain, crunchbase_url=crunchbase_url,
+            provider_tool=tool_id, observed_at=observed_at,
+        )
+    except Exception as exc:
+        return ({
+            "required_provider": "crunchbase_via_deepline",
+            "provider_tool": tool_id,
+            "status": "normalization_failed",
+            "error": f"{type(exc).__name__}: {exc}",
+            "observed_at": observed_at,
+            "raw_response_sha256": provider_snapshot["response_sha256"],
+            "discovery_version": FUNDING_DISCOVERY_VERSION,
+        }, snapshots, billing)
+    return ({
+        "required_provider": "crunchbase_via_deepline",
+        "status": "completed",
+        "crunchbase_observation": normalized,
+        "observed_at": observed_at,
+        "raw_response_sha256": provider_snapshot["response_sha256"],
+        "discovery_version": FUNDING_DISCOVERY_VERSION,
+    }, snapshots, billing)
 
 
 def get_account(domain: str, database_path: Path = DEFAULT_DATABASE_PATH) -> dict[str, Any] | None:
@@ -307,14 +542,28 @@ def enrich_company(
         if identity_match else {}
     )
     funding_value = company.get("funding")
-    funding_status = "blocked_provider_unavailable"
+    funding, funding_snapshots, funding_billing = _collect_funding(
+        domain=domain, crunchbase_url=company.get("crunchbase_url"),
+        runner=runner, output_root=output_root, observed_at=observed_at,
+    )
+    snapshots.extend(funding_snapshots)
+    current_run_billing.extend(funding_billing)
+    if funding_value is not None:
+        funding["prospeo_observation"] = funding_value
+        funding["prospeo_interpretation"] = (
+            "Retained as non-authoritative context; only the exact Crunchbase observation is scored."
+        )
     profile = {
         "schema_version": "1.0",
         "enrichment_version": ENRICHMENT_VERSION,
         "domain": domain,
         "name": str(company.get("name") or identity_basic.get("name") or account_name or domain),
         "website_url": str(company.get("website") or f"https://{domain}"),
-        "status": "partial",
+        "status": (
+            "completed"
+            if resolved_linkedin_id and funding["status"] == "completed"
+            else "partial"
+        ),
         "cache_hit": False,
         "last_enriched_at": observed_at,
         "identity": {
@@ -340,16 +589,7 @@ def enrich_company(
             "founded_year": company.get("founded") or identity_basic.get("year_founded"),
             "headquarters": company.get("location"),
         },
-        "funding": {
-            "required_provider": "crunchbase_via_deepline",
-            "status": funding_status,
-            "prospeo_observation": funding_value,
-            "interpretation": (
-                "Prospeo funding is retained as non-authoritative context; Crunchbase is required for scoring."
-                if funding_value else
-                "No callable Deepline Crunchbase contract is available; funding remains unresolved."
-            ),
-        },
+        "funding": funding,
         "downstream_keys": {
             "website_scrape": domain,
             "builtwith": domain,
@@ -380,6 +620,62 @@ def enrich_company(
         "source_snapshots": snapshots,
         "current_run_billing": current_run_billing,
     }
+    _persist(profile, snapshots, database_path)
+    normalized_dir = output_root / domain / "normalized"
+    normalized_dir.mkdir(parents=True, exist_ok=True)
+    (normalized_dir / "company_profile.json").write_text(
+        json.dumps(profile, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return profile
+
+
+def enrich_company_funding(
+    domain: str, *, database_path: Path = DEFAULT_DATABASE_PATH,
+    output_root: Path = Path("data/company_enrichment"),
+    runner: DeeplineCliRunner | None = None,
+) -> dict[str, Any]:
+    """Refresh only authoritative funding for an already cached company."""
+    domain = _domain(domain)
+    profile = get_account(domain, database_path)
+    if profile is None:
+        raise ValueError(
+            "company must be enriched and cached before funding can be refreshed"
+        )
+    observed_at = _now()
+    runner = runner or SubprocessDeeplineCliRunner()
+    funding, snapshots, billing = _collect_funding(
+        domain=domain,
+        crunchbase_url=profile.get("identifiers", {}).get("crunchbase_url"),
+        runner=runner, output_root=output_root, observed_at=observed_at,
+    )
+    previous_context = profile.get("funding", {}).get("prospeo_observation")
+    if previous_context is not None:
+        funding["prospeo_observation"] = previous_context
+        funding["prospeo_interpretation"] = (
+            "Retained as non-authoritative context; only the exact Crunchbase observation is scored."
+        )
+    profile["funding"] = funding
+    profile["enrichment_version"] = ENRICHMENT_VERSION
+    profile["status"] = (
+        "completed"
+        if profile.get("identity", {}).get("status") == "completed"
+        and funding["status"] == "completed"
+        else "partial"
+    )
+    profile["last_enriched_at"] = observed_at
+    profile["field_provenance"]["funding"] = (
+        "crunchbase_via_deepline"
+        if funding["status"] == "completed"
+        else "crunchbase_via_deepline_required"
+    )
+    existing_snapshots = {
+        item["snapshot_id"]: item for item in profile.get("source_snapshots", [])
+    }
+    for snapshot in snapshots:
+        existing_snapshots.setdefault(snapshot["snapshot_id"], snapshot)
+    profile["source_snapshots"] = list(existing_snapshots.values())
+    profile["cache_hit"] = True
+    profile["current_run_billing"] = billing
     _persist(profile, snapshots, database_path)
     normalized_dir = output_root / domain / "normalized"
     normalized_dir.mkdir(parents=True, exist_ok=True)

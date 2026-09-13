@@ -22,7 +22,7 @@ from .paid_gap_review import (
     review_paid_gap_candidate,
 )
 from .job_collection import collect_deepline_jobs, replay_deepline_jobs
-from .company_enrichment import enrich_company, get_account
+from .company_enrichment import enrich_company, enrich_company_funding, get_account
 from .review_queue import (
     DEFAULT_DATABASE_PATH,
     export_gap_profile,
@@ -145,6 +145,13 @@ def build_parser() -> argparse.ArgumentParser:
     enrich_account.add_argument("--output-dir", type=Path, default=Path("data/company_enrichment"))
     enrich_account.add_argument("--refresh", action="store_true")
     enrich_account.add_argument("--prospeo-response", type=Path)
+    enrich_funding = subparsers.add_parser(
+        "enrich-company-funding",
+        help="Refresh Crunchbase funding for a cached company without calling Prospeo",
+    )
+    enrich_funding.add_argument("domain")
+    enrich_funding.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    enrich_funding.add_argument("--output-dir", type=Path, default=Path("data/company_enrichment"))
     show_account = subparsers.add_parser(
         "show-company", help="Show the cached canonical company record without provider calls"
     )
@@ -509,6 +516,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
+    if args.command == "enrich-company-funding":
+        result = enrich_company_funding(
+            args.domain, database_path=args.database, output_root=args.output_dir,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0 if result["funding"]["status"] == "completed" else 1
     if args.command == "ingest-paid-gap-candidates":
         print(json.dumps(ingest_paid_gap_candidates(args.run_dir, args.database), indent=2, sort_keys=True))
         return 0

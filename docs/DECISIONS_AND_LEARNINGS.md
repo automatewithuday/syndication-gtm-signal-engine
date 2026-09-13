@@ -1012,3 +1012,23 @@ coverage rather than raw page count.
   separate output columns. The real-account replay ranks DailyPay 91.7 above
   ColdIQ 88.6, but both remain `insufficient_evidence` opportunities.
 - Validation: `docs/validation/2026-09-13-portfolio-report.md`.
+
+### 2026-09-13 — Funding retries are isolated from canonical enrichment spend
+
+- Company enrichment now discovers an exact Crunchbase provider from
+  Deepline's live catalog rather than hardcoding or guessing a tool contract.
+  Both the catalog provider field and described contract must identify a
+  connected, callable Crunchbase tool before execution.
+- Aviato and LeadMagic appeared in the live funding search but were rejected as
+  substitutes. The absence of an exact connector is stored as
+  `blocked_provider_unavailable`, not converted into evidence of no funding.
+- Catalog and provider envelopes are content-addressed local snapshots. A paid
+  response is persisted before normalization, preserving auditability even if
+  company attribution or payload parsing fails.
+- Added `enrich-company-funding` for cached accounts. It can complete the
+  missing source later without refreshing or repurchasing Prospeo. Repeated
+  responses reuse their snapshot IDs.
+- Live DailyPay and ColdIQ refreshes stored the same catalog hash and incurred
+  no provider billing. Both remain correctly partial until Deepline exposes the
+  requested Crunchbase provider.
+- Validation: `docs/validation/2026-09-13-crunchbase-funding-boundary.md`.
