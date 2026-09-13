@@ -90,6 +90,7 @@ def build_account_intelligence_report(
     job_postings = _load_jsonl(run_dir / "normalized" / "job_postings.jsonl")
     company_enrichment = _load(run_dir / "normalized" / "company_enrichment.json")
     unified_score = _load(run_dir / "normalized" / "unified_account_score.json")
+    outbound_calling = _load(run_dir / "normalized" / "outbound_calling_score.json")
     gap_acquisition = _load(
         run_dir / "normalized" / "gap_evidence_acquisition.json"
     )
@@ -177,6 +178,7 @@ def build_account_intelligence_report(
         "technology": {"provider_status": builtwith.get("status", "unknown"), "detections": len(profile.get("technologies", []))},
         "paid_ads": {"provider": "adyntel", "fallback_provider": "apify" if apify else None, "platforms": platforms},
         "paid_channel_scores": paid.get("channels") or None,
+        "outbound_calling_score": outbound_calling or None,
         "business_signals": {
             "candidate_count": initiatives.get("candidate_count", 0),
             "dated_candidate_count": initiatives.get("dated_candidate_count", 0),
@@ -281,6 +283,14 @@ def build_account_intelligence_report(
     for channel, item in (report["paid_channel_scores"] or {}).items():
         readiness = item.get("readiness", {})
         lines.append(f"- {channel.title()}: {readiness.get('score', 'unknown')} / 100; {readiness.get('status', 'unknown')}; confidence {readiness.get('confidence', 0)}; evidence coverage {readiness.get('evidence_coverage', 'unknown')}")
+    if report["outbound_calling_score"]:
+        readiness = report["outbound_calling_score"].get("components", {}).get("readiness", {})
+        lines.append(
+            f"- Outbound calling: {readiness.get('score', 'unknown')} / 100; "
+            f"{readiness.get('status', 'unknown')}; confidence "
+            f"{readiness.get('confidence', 0)}; evidence coverage "
+            f"{readiness.get('evidence_coverage', 'unknown')}"
+        )
     lines.extend(["", "## Business-timing signals", ""])
     lines.append(
         f"- Pending/reviewed candidates: {report['business_signals']['candidate_count']} "

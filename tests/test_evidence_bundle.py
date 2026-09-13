@@ -43,6 +43,50 @@ class EvidenceBundleTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "requires a qualified account"):
                 export_evidence_bundle(self.make_run(root, "insufficient_evidence"), root / "bundle.json")
 
+    def test_exports_qualified_outbound_bundle_from_unified_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = root / "run"
+            (run / "normalized").mkdir(parents=True)
+            components = {
+                key: {"score": 80, "confidence": 0.8, "evidence": [{"url": "https://example.com/proof"}]}
+                for key in ("fit", "readiness", "gap", "trigger")
+            }
+            (run / "normalized/unified_account_score.json").write_text(json.dumps({
+                "snapshot_id": "unified-snap", "scoring_version": "unified_account_v1",
+                "scoring_logic_version": "unified_scorer_v2",
+                "account": {"name": "Example", "domain": "example.com"},
+                "input": {"run_id": "run-1"},
+                "channels": {"outbound_calling": {
+                    "status": "qualified", "total": 80, "confidence": 0.8,
+                    "components": components, "blockers": [],
+                }},
+            }))
+            output = root / "outbound-bundle.json"
+
+            result = export_evidence_bundle(
+                run, output, channel="outbound_calling",
+            )
+
+            self.assertEqual("outbound_calling", result["channel"])
+            self.assertEqual("unified-snap", result["snapshot_id"])
+            self.assertEqual("outbound_calling", json.loads(output.read_text())["channel"])
+
+    def test_refuses_unqualified_outbound_bundle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = root / "run"
+            (run / "normalized").mkdir(parents=True)
+            (run / "normalized/unified_account_score.json").write_text(json.dumps({
+                "channels": {"outbound_calling": {
+                    "status": "insufficient_evidence", "blockers": ["gap"],
+                }},
+            }))
+            with self.assertRaisesRegex(ValueError, "qualified outbound"):
+                export_evidence_bundle(
+                    run, root / "bundle.json", channel="outbound_calling",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

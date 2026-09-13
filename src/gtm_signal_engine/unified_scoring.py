@@ -13,7 +13,7 @@ from .review_queue import DEFAULT_DATABASE_PATH, connect_database
 DEFAULT_CONFIG_PATH = (
     Path(__file__).resolve().parents[2] / "config" / "unified_account_scoring.v1.json"
 )
-SCORING_LOGIC_VERSION = "unified_scorer_v1"
+SCORING_LOGIC_VERSION = "unified_scorer_v2"
 
 
 def _now() -> str:
@@ -468,11 +468,16 @@ def _trigger_component(
 
 
 def _gap_for_channel(
-    channel: str, syndication: dict[str, Any] | None, paid: dict[str, Any] | None
+    channel: str, syndication: dict[str, Any] | None, paid: dict[str, Any] | None,
+    outbound: dict[str, Any] | None,
 ) -> dict[str, Any]:
     if channel == "content_syndication":
         return dict((syndication or {}).get("components", {}).get("gap") or _unknown(
             "content-syndication gap evidence is unavailable"
+        ))
+    if channel == "outbound_calling":
+        return dict((outbound or {}).get("components", {}).get("gap") or _unknown(
+            "outbound-calling gap evidence is unavailable"
         ))
     return dict((paid or {}).get("channels", {}).get(channel, {}).get("gap") or _unknown(
         f"{channel} gap evidence is unavailable"
@@ -480,10 +485,15 @@ def _gap_for_channel(
 
 
 def _readiness_for_channel(
-    channel: str, website: dict[str, Any], paid: dict[str, Any] | None
+    channel: str, website: dict[str, Any], paid: dict[str, Any] | None,
+    outbound: dict[str, Any] | None,
 ) -> dict[str, Any]:
     if channel == "content_syndication":
         return website
+    if channel == "outbound_calling":
+        return dict((outbound or {}).get("components", {}).get("readiness") or _unknown(
+            "outbound-calling readiness is unavailable"
+        ))
     return dict((paid or {}).get("channels", {}).get(channel, {}).get("readiness") or _unknown(
         f"{channel} readiness is unavailable"
     ))
@@ -493,17 +503,20 @@ def _channel_scores(
     firmographic: dict[str, Any], website: dict[str, Any], hiring: dict[str, Any],
     funding: dict[str, Any], business_trigger: dict[str, Any] | None,
     syndication: dict[str, Any] | None, paid: dict[str, Any] | None,
+    outbound: dict[str, Any] | None,
     config: dict[str, Any],
 ) -> dict[str, Any]:
     trigger = _trigger_component(hiring, funding, business_trigger)
     weights = config["channel_component_weights"]
     thresholds = config["qualification"]
     result: dict[str, Any] = {}
-    for channel in ("content_syndication", "retargeting", "programmatic"):
+    for channel in (
+        "content_syndication", "retargeting", "programmatic", "outbound_calling",
+    ):
         components = {
             "fit": firmographic,
-            "readiness": _readiness_for_channel(channel, website, paid),
-            "gap": _gap_for_channel(channel, syndication, paid),
+            "readiness": _readiness_for_channel(channel, website, paid, outbound),
+            "gap": _gap_for_channel(channel, syndication, paid, outbound),
             "trigger": trigger,
         }
         blockers = [key for key, value in components.items() if value.get("score") is None]
@@ -584,6 +597,7 @@ def score_unified_account_run(
         "technology_collection": "deepline_collection.json",
         "external_profile": "external_profile.json",
         "paid_channels": "paid_channel_scores.json",
+        "outbound_calling": "outbound_calling_score.json",
         "syndication": "syndication_score.json",
     }
     artifacts: dict[str, dict[str, Any] | None] = {}
@@ -624,7 +638,7 @@ def score_unified_account_run(
     channels = _channel_scores(
         signals["firmographic_fit"], signals["website"], signals["hiring"],
         signals["funding"], artifacts["business_trigger"], artifacts["syndication"],
-        artifacts["paid_channels"], config,
+        artifacts["paid_channels"], artifacts["outbound_calling"], config,
     )
     qualified_channels = [key for key, value in channels.items() if value["status"] == "qualified"]
     opportunity_status = "qualified" if qualified_channels else "insufficient_evidence"

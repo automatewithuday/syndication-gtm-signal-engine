@@ -92,22 +92,40 @@ class GapWorkflowTests(unittest.TestCase):
 
         def unified(*_args, **_kwargs):
             paid = paid_score(run_dir, run_dir / "normalized" / "external_profile.json")
+            channels = {
+                channel: {
+                    "total": 75.0 if detail["gap"]["status"] == "provisional_pass" else None,
+                    "status": "qualified" if detail["gap"]["status"] == "provisional_pass" else "insufficient_evidence",
+                }
+                for channel, detail in paid["channels"].items()
+            }
+            channels["outbound_calling"] = {
+                "total": None, "status": "insufficient_evidence",
+            }
             return {
                 "snapshot_id": "unified-snapshot",
                 "priority": {"score": 80, "status": "high_priority"},
                 "qualification": {"opportunity_status": "insufficient_evidence"},
-                "channels": {
-                    channel: {
-                        "total": 75.0 if detail["gap"]["status"] == "provisional_pass" else None,
-                        "status": "qualified" if detail["gap"]["status"] == "provisional_pass" else "insufficient_evidence",
-                    }
-                    for channel, detail in paid["channels"].items()
-                },
+                "channels": channels,
             }
+
+        def outbound_score(*_args, **_kwargs):
+            profile = json.loads(
+                (run_dir / "normalized" / "outbound_gap_profile.json").read_text()
+            )
+            observations = profile["observations"]
+            return {"components": {"gap": {
+                "score": 65.0 if len(observations) >= 2 else None,
+                "status": (
+                    "provisional_pass" if len(observations) >= 2
+                    else "insufficient_evidence"
+                ),
+            }}}
 
         with patch("gtm_signal_engine.gap_workflow.score_channel_gap_run", side_effect=content_score), \
              patch("gtm_signal_engine.gap_workflow.score_syndication_run", side_effect=syndication_score), \
              patch("gtm_signal_engine.gap_workflow.score_paid_channel_run", side_effect=paid_score), \
+             patch("gtm_signal_engine.gap_workflow.score_outbound_calling_run", side_effect=outbound_score), \
              patch("gtm_signal_engine.gap_workflow.score_unified_account_run", side_effect=unified), \
              patch("gtm_signal_engine.gap_workflow.build_account_intelligence_report", return_value={
                  "outputs": {"json": "account.json", "markdown": "account.md"}

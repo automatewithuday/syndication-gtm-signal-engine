@@ -1032,3 +1032,25 @@ coverage rather than raw page count.
   no provider billing. Both remain correctly partial until Deepline exposes the
   requested Crunchbase provider.
 - Validation: `docs/validation/2026-09-13-crunchbase-funding-boundary.md`.
+
+### 2026-09-14 — Outbound calling becomes a first-class reviewed channel
+
+- The modern pipeline previously mentioned outbound calling only in the legacy
+  file-input scorer. The exact-run resolver, unified score, account report,
+  evidence bundle, and outcome snapshot covered only three channels. A
+  completion audit exposed that mismatch.
+- Added a separate outbound review queue and configuration. Candidate matches
+  are prompts, never scored evidence; approved observations must bind to the
+  same Scrapling URL, content hash, observation time, and excerpt at standalone
+  scoring time as well as export time.
+- Readiness counts distinct conversion-path types rather than URLs. DailyPay's
+  many duplicate conversion URLs initially inflated readiness; type-level
+  counting corrected it to 78.7 while ColdIQ is 84.8.
+- Outbound readiness is not an outbound gap. Both real accounts retain null
+  totals and `insufficient_evidence` because no approved gap observation exists.
+- Snapshot identity now prefers upstream semantic snapshot/input identities, so
+  timestamp-only regeneration cannot create a new logical outbound score.
+- Frozen outbound evidence normalizes readiness factors into named signals, so
+  later outcome analysis can evaluate which evidence families predict meetings
+  and opportunities.
+- Validation: `docs/validation/2026-09-14-outbound-calling.md`.

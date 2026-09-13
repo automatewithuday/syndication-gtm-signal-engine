@@ -1,0 +1,54 @@
+{
+  "version": "outbound_calling_v1",
+  "score_mode": "known_evidence_normalized",
+  "readiness": {
+    "factor_weights": {
+      "professional_buyer_coverage": 25,
+      "sales_motion": 25,
+      "operating_scale": 20,
+      "sales_conversion_paths": 15,
+      "customer_proof": 15
+    },
+    "full_at": {
+      "sales_conversion_paths": 2,
+      "customer_proof": 5
+    },
+    "minimum_score": 60,
+    "minimum_confidence": 0.60,
+    "minimum_evidence_coverage": 0.70
+  },
+  "gap": {
+    "signal_points": {
+      "explicit_expansion_intent": 35,
+      "documented_outbound_bottleneck": 30,
+      "active_outbound_partner_or_hiring_search": 20,
+      "documented_outbound_performance_shortfall": 15
+    },
+    "contradiction_types": [
+      "documented_healthy_outbound_program",
+      "documented_outbound_success"
+    ],
+    "strength_credit": {
+      "confirmed": 1.0,
+      "likely": 0.85,
+      "possible": 0.5
+    },
+    "minimum_score": 45,
+    "minimum_confidence": 0.70,
+    "minimum_supporting_signal_types": 2
+  },
+  "component_weights": {
+    "fit": 0.30,
+    "readiness": 0.25,
+    "gap": 0.25,
+    "trigger": 0.20
+  },
+  "qualification": {
+    "minimum_total": 60,
+    "minimum_confidence": 0.60
+  },
+  "calibration": {
+    "status": "provisional_unlabeled",
+    "note": "Outbound-calling weights require labeled outcomes before unattended qualification."
+  }
+}

@@ -15,6 +15,7 @@ from gtm_signal_engine.validation import (
     review_classification,
     signal_outcome_metrics,
 )
+from gtm_signal_engine.review_queue import connect_database
 
 
 class ValidationTests(unittest.TestCase):
@@ -82,6 +83,55 @@ class ValidationTests(unittest.TestCase):
             by_signal = signal_outcome_metrics(database)
             self.assertEqual(3, len(by_signal))
             self.assertTrue(all(item["meeting_rate"] == 1.0 for item in by_signal))
+
+    def test_qualified_outbound_snapshot_is_frozen_by_channel(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = self.make_run(root)
+            database = root / "db.sqlite3"
+            components = {
+                key: {"score": 80, "confidence": 0.8, "evidence": []}
+                for key in ("fit", "readiness", "gap", "trigger")
+            }
+            components["readiness"]["factors"] = [{
+                "id": "sales_motion", "state": "observed",
+                "observed": "enterprise", "confidence": 0.9,
+                "source": "normalized/account_fit.json",
+            }]
+            (run / "normalized/unified_account_score.json").write_text(json.dumps({
+                "snapshot_id": "outbound-snapshot", "scoring_version": "unified_account_v1",
+                "account": {"name": "Example", "domain": "example.com"},
+                "input": {"run_id": "run-1"},
+                "channels": {"outbound_calling": {
+                    "status": "qualified", "components": components,
+                }},
+            }))
+
+            result = create_outreach_snapshot(
+                run, database_path=database, channel="outbound_calling",
+            )
+
+            self.assertEqual("outbound_calling", result["channel"])
+            self.assertEqual("outbound-snapshot", result["snapshot_id"])
+            with connect_database(database) as connection:
+                frozen = json.loads(connection.execute(
+                    "SELECT evidence_json FROM outreach_snapshots WHERE snapshot_id = ?",
+                    (result["snapshot_id"],),
+                ).fetchone()[0])
+            self.assertEqual("sales_motion", frozen["readiness"][0]["signal"])
+
+    def test_unqualified_outbound_snapshot_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = self.make_run(root)
+            (run / "normalized/unified_account_score.json").write_text(json.dumps({
+                "channels": {"outbound_calling": {"status": "insufficient_evidence"}},
+            }))
+            with self.assertRaisesRegex(ValueError, "requires a qualified"):
+                create_outreach_snapshot(
+                    run, database_path=root / "db.sqlite3",
+                    channel="outbound_calling",
+                )
 
 
 if __name__ == "__main__":

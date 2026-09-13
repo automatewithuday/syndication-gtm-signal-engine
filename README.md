@@ -27,7 +27,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 175-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 195-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -367,9 +367,28 @@ uv run gtm-signals score-paid-channels data/runs/<run-id> \
 Paid-channel V3 requires two distinct approved supporting signal types and the
 configured score/confidence thresholds. Explicit healthy-channel evidence
 disqualifies the gap; mixed evidence routes to review; no candidates remains
-unknown. The current job-posting coverage is first-party/same-domain only, so
-externally hosted ATS listings are a known coverage gap rather than evidence of
-no hiring.
+unknown. Hiring coverage combines LinkedIn Jobs through Deepline/HarvestAPI,
+Google for Jobs through Deepline/OpenWebNinja, and first-party career pages;
+completed bounded searches still do not prove that no hiring exists.
+
+Discover and review outbound-calling gap evidence independently:
+
+```bash
+uv run gtm-signals discover-outbound-gap-candidates data/runs/<run-id>
+uv run gtm-signals ingest-outbound-gap-candidates data/runs/<run-id>
+uv run gtm-signals list-outbound-gap-candidates --status pending
+uv run gtm-signals review-outbound-gap-candidate <candidate-id> \
+  --decision approve --reviewer <name> --notes <reason> \
+  --strength confirmed --confidence 0.9
+uv run gtm-signals export-outbound-gap-profile data/runs/<run-id> \
+  --account-name <company>
+uv run gtm-signals score-outbound-calling data/runs/<run-id>
+```
+
+Outbound calling has its own readiness and reviewed-gap model. Readiness uses
+buyer coverage, sales motion, operating scale, conversion paths, and customer
+proof. Qualification still requires at least two approved gap signal types;
+public silence about an internal calling motion remains unknown.
 
 Persist candidates and review decisions locally in SQLite:
 
@@ -396,8 +415,8 @@ uv run gtm-signals resolve-channel-gaps data/runs/<run-id> \
   --account-name <company>
 ```
 
-This idempotently rediscovers and ingests content-syndication, retargeting, and
-programmatic candidates, exports only approvals bound to the exact run and page
+This idempotently rediscovers and ingests content-syndication, retargeting,
+programmatic, and outbound-calling candidates, exports only approvals bound to the exact run and page
 hash, and rebuilds channel plus unified account scores. Pending candidates yield
 `review_required`; no candidates yield `insufficient_evidence`, never a zero or
 an unused-channel claim. `run-account-v1` executes this resolution stage

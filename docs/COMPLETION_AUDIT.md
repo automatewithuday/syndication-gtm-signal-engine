@@ -1,98 +1,96 @@
-# Completion audit — local review release
+# Completion audit — local V1
 
-Audited 2026-09-12 against `docs/CODEX_EXECUTION_BRIEF.md`, `AGENTS.md`, and the
-user's milestone decisions. This is the full local V1 release. Live paid
-providers are active through credentials held outside the repository; remote
-persistence and automated outreach remain outside the approved scope. Local
-files/SQLite were explicitly selected, and no outreach was authorized.
+Audited 2026-09-14 against `docs/CODEX_EXECUTION_BRIEF.md`, `AGENTS.md`, and
+the user's recorded milestone decisions. This audit covers the complete local
+review product. Local files and SQLite are intentional; no outreach has been
+authorized. Live provider credentials remain outside the repository.
 
-## Cross-cutting invariants
+## Invariants
 
-| Requirement | Evidence | Result |
+| Requirement | Implementation | Result |
 | --- | --- | --- |
-| Public-web absence remains unknown | `channel_gap.py`, `paid_channel_scoring.py`, and corrected legacy `scoring.py`; regression tests | Pass |
-| URL/excerpt/time/method/confidence provenance | `Evidence`, fit/gap/trigger validators, account review JSON | Pass |
-| Raw provider isolation | provider protocols and recorded adapters return normalized models with raw artifact pointers | Pass |
-| Canonical/content-hash idempotency | collector identities, canonical repair, exact occurrence tables | Pass |
-| Configured/versioned scoring | content v1/v2 and paid-channel v1/v2/v3 configs plus snapshot hashes | Pass |
-| No untraceable outreach claims | qualification-gated bundle export and send-time snapshots | Pass |
-| Secrets remain outside artifacts | `SecretVault` and macOS Keychain adapter; repository secret-pattern check empty | Pass |
+| Public-web absence is uncertainty | all four gap scorers keep missing evidence null/unknown | Pass |
+| Auditable provenance | URL, excerpt, observed time, method, confidence, run and content hash | Pass |
+| Raw provider isolation | normalized adapters retain content-addressed raw pointers | Pass |
+| Idempotent collection/review | canonical URLs, hashes, occurrences, append-only reviews | Pass |
+| Versioned scoring | packaged configs, logic versions, stable snapshot IDs | Pass |
+| No unsupported outreach | qualification-gated bundles and frozen send-time snapshots | Pass |
+| Secret boundary | encrypted vault/Keychain; no credentials in artifacts or fixtures | Pass |
 
-## Phase 1 — website intelligence
+## Account enrichment and signal collection
 
-| Requirement | Evidence | Result |
-| --- | --- | --- |
-| Sole live website provider | `ScraplingFetcher`, browser transport still inside Scrapling | Pass |
-| Raw/normalized separation | `raw/*.body`, raw metadata, `normalized/pages.jsonl` | Pass |
-| Bounded discovery and deduplication | sitemap/link inventory, page cap, canonical URL and body hash | Pass |
-| Typed page/asset/form/conversion/proof models | `models.py` | Pass |
-| Deterministic rules plus optional structured fallback | `classifiers.py`, `semantic.py` | Pass |
-| Asset type, gating, freshness, segments, funnel, proof | classifiers and asset analysis | Pass |
-| Configurable content-syndication scoring | `content_syndication_scoring.v2.json` and component scorers | Pass |
-| Single-domain JSON command | `gtm-signals crawl-and-analyze ... --output ...`; end-to-end fixture test | Pass |
-| Precision gates | 20/20 asset family and 17/17 gating on maintained sanitized benchmark | Pass |
+| Capability | Result |
+| --- | --- |
+| Canonical domain-first company cache; Prospeo only through Deepline | Pass |
+| LinkedIn URL/ID, headcount, revenue, industry, location and provider IDs reused downstream | Pass |
+| Scrapling-only website crawl and targeted gap acquisition | Pass |
+| BuiltWith technology through Deepline | Pass |
+| Adyntel Meta, LinkedIn and Google through Deepline; guarded Apify fallback | Pass |
+| LinkedIn Jobs plus Google Jobs plus same-domain career pages | Pass |
+| Crunchbase-only funding boundary and isolated cached-company retry | Implemented; live provider unavailable |
 
-Firecrawl in the original brief is superseded by the explicit Scrapling-only
-decision. Ambiguous cases remain unknown when no semantic provider is configured.
+The Crunchbase requirement is deliberately not relabeled as complete evidence.
+Deepline's inspected catalog did not expose a callable Crunchbase provider;
+DailyPay and ColdIQ therefore store `blocked_provider_unavailable`. The retry
+command does not repurchase Prospeo.
 
-## Phase 2 — external and campaign signals
+## Scoring and decision workflow
 
-| Requirement | Evidence | Result |
-| --- | --- | --- |
-| Deepline/BuiltWith normalization | live adapter, immutable envelopes, local replay, malformed-row audit, and fixtures | Pass |
-| Deepline/Adyntel Meta/LinkedIn/Google | single-attempt calls, totals/coverage, billing, raw hashes, and five-account validation | Pass with two recorded inconclusive channels |
-| Apify Meta/LinkedIn fallback | guarded live adapter, pinned actor builds, vault boundary, strict attribution, and fixtures | Pass |
-| Observed/canonical URLs plus UTM/click IDs | `CampaignUrl` and parser tests | Pass |
-| Campaign/SERP pages missed by crawl | recorded Scrapling SERP adapter | Pass |
-| Technology source and limits | `TechnologyObservation` | Pass |
-| Retargeting/programmatic readiness and gap | creative-aware `paid_channels_v3`, known-evidence normalization, v1/v2 replay | Pass |
+The unified priority score covers firmographic fit, hiring, funding,
+advertising, technology, and website evidence using known-evidence
+normalization. It ranks accounts but never asserts a channel gap.
 
-No unsupported real score is fabricated. ColdIQ's primary Meta result stays
-inconclusive alongside a bounded explicit-zero fallback result. Linear LinkedIn
-stays unknown because configured providers did not resolve it conclusively.
+All four requested channels are first-class in the modern pipeline:
 
-## Phase 3 — local persistence and orchestration
+| Channel | Readiness | Exact-run reviewed gap | Unified/report | Bundle/snapshot |
+| --- | --- | --- | --- | --- |
+| Content syndication | Yes | Yes | Yes | Yes |
+| Retargeting | Yes | Yes | Yes | Yes |
+| Programmatic | Yes | Yes | Yes | Yes |
+| Outbound calling | Yes | Yes | Yes | Yes |
 
-| Requirement | Evidence | Result |
-| --- | --- | --- |
-| Versioned migrations | six packaged SQLite migrations | Pass |
-| Idempotent/resumable jobs | stable request hash, account/stage transitions, saved-run replay without repurchase | Pass |
-| Concurrency/rate limit/retries/cost | bounded workers, crawl delay, Scrapling retries, cost field | Pass |
-| CSV/JSONL batches | `enqueue-batch`, `run-pending-jobs` | Pass |
-| Portfolio decision view | `build-portfolio-report` JSON/CSV/Markdown with one current row per domain | Pass |
-| Provider mocks/end-to-end fixtures | recorded provider fixtures, complete workflow tests, and five-account live acceptance | Pass |
-| Qualified evidence export | snapshot-checked `export-evidence-bundle` with hard qualification gate | Pass |
+Each channel preserves fit, readiness, gap, and trigger separately. A missing
+required component keeps the total null. Candidate rules never approve their
+own output. Contradictory evidence is not averaged into a positive result.
 
-Supabase/Postgres is intentionally deferred by the user's local SQLite decision.
+## Persistence, orchestration, and learning
 
-## Phase 4 — validation and learning
-
-| Requirement | Evidence | Result |
-| --- | --- | --- |
-| Agree/disagree/correct review | `classification_reviews` and `review-classification` | Pass |
-| Exact send-time evidence/score snapshot | `outreach_snapshots` and snapshot command | Pass |
-| Outcome imports | six explicit event types with idempotent CSV/JSONL import | Pass |
-| Precision by channel and signal | channel and frozen-signal outcome metrics | Pass |
-| Configurable validation thresholds | versioned config; explicitly `provisional` pending a real outcome sample | Pass |
-
-No outreach was sent and no outcome calibration is claimed. The infrastructure
-is ready to learn once authorized campaigns generate a meaningful sample.
+- Eleven packaged SQLite migrations cover review queues, canonical accounts,
+  resumable job stages, unified scores, outbound review, and outcome snapshots.
+- `account_pipeline_v2` persists collection policy and checkpoints every stage.
+- CSV/JSONL batch requests hash pipeline version, provider exclusions, budgets,
+  and retry intent; portfolio reports select the latest policy per domain.
+- Send-time snapshots, idempotent sends, six outcome types, and per-channel and
+  per-signal metrics are ready. Calibration remains explicitly provisional
+  until authorized outreach produces a meaningful labeled sample.
 
 ## Real-account acceptance
 
 - DailyPay authoritative run: `20260910T224631Z-52eaa2e5`.
 - ColdIQ authoritative run: `20260910T224633Z-e599a4a6`.
-- HubSpot authoritative run: `20260912T154913Z-418b2e32`.
-- Gong authoritative run: `20260912T155024Z-dabb2a1c`.
-- Linear authoritative run: `20260912T155445Z-9cb88b7e`.
-- `reports/FIVE_ACCOUNT_ACCEPTANCE.{json,md}` records the verified outputs,
-  spend, provider coverage, and unresolved evidence.
+- HubSpot, Gong, and Linear acceptance remains recorded in
+  `reports/FIVE_ACCOUNT_ACCEPTANCE.md`.
+- Provider-free four-channel replay: DailyPay priority 91.7 and outbound
+  readiness 78.7; ColdIQ priority 88.6 and outbound readiness 84.8.
+- Both accounts remain `insufficient_evidence` for every channel because the
+  required reviewed gap evidence is absent. This is a correct unknown, not a
+  zero or unused-channel claim.
+- ColdIQ Meta remains intentionally `not_collected_by_decision` for future runs.
 
 ## Verification record
 
-- Full suite: 175 tests passed in the latest verification run; paid APIs are
-  replaced by recorded payloads or fakes in tests.
-- Python compile check and `git diff --check`: pass.
-- Wheel build: pass.
-- Wheel and source distribution build: pass; CLI, six migrations, and installed
-  content/paid/creative configurations are present.
+- Full deterministic suite: **195 passed**.
+- Focused outbound/unified/validation/CLI suite: **43 passed**.
+- Paid APIs are replaced by recorded payloads or fakes in tests.
+- DailyPay and ColdIQ gap replays made no paid provider calls.
+- `git diff --check`, compile, wheel/sdist content, installed CLI/config lookup,
+  and tracked-file secret scans are release gates.
+
+## Release conclusion
+
+The local V1 engine is functionally complete for provider-neutral collection,
+review, scoring, reporting, batching, and validation across all four requested
+channels. Two honest external-state limitations remain: authoritative
+Crunchbase funding cannot be collected until Deepline exposes that exact
+provider, and model calibration cannot be claimed before real authorized
+outcomes exist. Neither limitation is converted into fabricated evidence.

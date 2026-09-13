@@ -59,6 +59,14 @@ from .unified_scoring import score_unified_account_run
 from .gap_workflow import resolve_channel_gaps
 from .gap_acquisition import acquire_gap_evidence, build_gap_target_plan
 from .portfolio_report import build_portfolio_report
+from .outbound_calling import (
+    discover_outbound_gap_candidates,
+    export_outbound_gap_profile,
+    ingest_outbound_gap_candidates,
+    list_outbound_gap_candidates,
+    review_outbound_gap_candidate,
+    score_outbound_calling_run,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -120,6 +128,11 @@ def build_parser() -> argparse.ArgumentParser:
         "discover-paid-gap-candidates", help="Surface retargeting/programmatic gap claims for review"
     )
     discover_paid_gap.add_argument("run_dir", type=Path)
+    discover_outbound_gap = subparsers.add_parser(
+        "discover-outbound-gap-candidates",
+        help="Surface outbound-calling gap claims for review",
+    )
+    discover_outbound_gap.add_argument("run_dir", type=Path)
     collect_jobs = subparsers.add_parser(
         "collect-deepline-jobs", help="Collect demand-generation roles from LinkedIn Jobs and Google Jobs"
     )
@@ -185,6 +198,43 @@ def build_parser() -> argparse.ArgumentParser:
     export_paid_gap.add_argument("--account-name", required=True)
     export_paid_gap.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
     export_paid_gap.add_argument("--output", type=Path)
+    ingest_outbound_gap = subparsers.add_parser(
+        "ingest-outbound-gap-candidates",
+        help="Ingest outbound-calling gap candidates into SQLite",
+    )
+    ingest_outbound_gap.add_argument("run_dir", type=Path)
+    ingest_outbound_gap.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    list_outbound_gap = subparsers.add_parser(
+        "list-outbound-gap-candidates", help="List SQLite outbound-calling gap candidates"
+    )
+    list_outbound_gap.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    list_outbound_gap.add_argument("--status", choices=("pending", "approved", "rejected"))
+    review_outbound_gap = subparsers.add_parser(
+        "review-outbound-gap-candidate",
+        help="Approve or reject one outbound-calling gap candidate",
+    )
+    review_outbound_gap.add_argument("candidate_id")
+    review_outbound_gap.add_argument("--decision", choices=("approve", "reject"), required=True)
+    review_outbound_gap.add_argument("--reviewer", required=True)
+    review_outbound_gap.add_argument("--notes", required=True)
+    review_outbound_gap.add_argument("--strength", choices=("confirmed", "likely", "possible"))
+    review_outbound_gap.add_argument("--confidence", type=float)
+    review_outbound_gap.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    export_outbound_gap = subparsers.add_parser(
+        "export-outbound-gap-profile",
+        help="Export exact-run approved outbound-calling gap evidence",
+    )
+    export_outbound_gap.add_argument("run_dir", type=Path)
+    export_outbound_gap.add_argument("--account-name", required=True)
+    export_outbound_gap.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    export_outbound_gap.add_argument("--output", type=Path)
+    score_outbound = subparsers.add_parser(
+        "score-outbound-calling",
+        help="Score outbound-calling fit, readiness, gap, and trigger evidence",
+    )
+    score_outbound.add_argument("run_dir", type=Path)
+    score_outbound.add_argument("--profile", type=Path)
+    score_outbound.add_argument("--config", type=Path)
     ingest_initiative = subparsers.add_parser(
         "ingest-initiative-candidates", help="Ingest initiative candidates into the SQLite review queue"
     )
@@ -240,6 +290,7 @@ def build_parser() -> argparse.ArgumentParser:
     resolve_gaps.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
     resolve_gaps.add_argument("--content-config", type=Path)
     resolve_gaps.add_argument("--paid-config", type=Path)
+    resolve_gaps.add_argument("--outbound-config", type=Path)
     resolve_gaps.add_argument("--unified-config", type=Path)
     resolve_gaps.add_argument("--as-of", type=date.fromisoformat)
     plan_gaps = subparsers.add_parser(
@@ -365,6 +416,10 @@ def build_parser() -> argparse.ArgumentParser:
     snapshot = subparsers.add_parser("snapshot-outreach", help="Persist the exact evidence/score state before outreach")
     snapshot.add_argument("run_dir", type=Path)
     snapshot.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    snapshot.add_argument(
+        "--channel", choices=("content_syndication", "outbound_calling"),
+        default="content_syndication",
+    )
     send = subparsers.add_parser("record-send", help="Attach an authorized outreach send to a saved snapshot")
     send.add_argument("snapshot_id")
     send.add_argument("--contact-ref", required=True)
@@ -380,6 +435,10 @@ def build_parser() -> argparse.ArgumentParser:
     bundle = subparsers.add_parser("export-evidence-bundle", help="Export a qualified snapshot-bound evidence bundle")
     bundle.add_argument("run_dir", type=Path)
     bundle.add_argument("--output", type=Path, required=True)
+    bundle.add_argument(
+        "--channel", choices=("content_syndication", "outbound_calling"),
+        default="content_syndication",
+    )
     review_report = subparsers.add_parser(
         "build-review-report", help="Build an auditable account score and reasoning report"
     )
@@ -480,6 +539,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "discover-paid-gap-candidates":
         print(json.dumps(discover_paid_gap_candidates(args.run_dir), indent=2, sort_keys=True))
         return 0
+    if args.command == "discover-outbound-gap-candidates":
+        print(json.dumps(discover_outbound_gap_candidates(args.run_dir), indent=2, sort_keys=True))
+        return 0
     if args.command == "collect-deepline-jobs":
         result = collect_deepline_jobs(
             args.run_dir, args.domain, account_name=args.account_name,
@@ -544,6 +606,37 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
+    if args.command == "ingest-outbound-gap-candidates":
+        print(json.dumps(
+            ingest_outbound_gap_candidates(args.run_dir, args.database),
+            indent=2, sort_keys=True,
+        ))
+        return 0
+    if args.command == "list-outbound-gap-candidates":
+        print(json.dumps(
+            list_outbound_gap_candidates(args.database, review_status=args.status),
+            indent=2, sort_keys=True,
+        ))
+        return 0
+    if args.command == "review-outbound-gap-candidate":
+        print(json.dumps(review_outbound_gap_candidate(
+            args.candidate_id, decision=args.decision, reviewer=args.reviewer,
+            notes=args.notes, database_path=args.database, strength=args.strength,
+            confidence=args.confidence,
+        ), indent=2, sort_keys=True))
+        return 0
+    if args.command == "export-outbound-gap-profile":
+        print(json.dumps(export_outbound_gap_profile(
+            args.run_dir, account_name=args.account_name,
+            database_path=args.database, output_path=args.output,
+        ), indent=2, sort_keys=True))
+        return 0
+    if args.command == "score-outbound-calling":
+        result = score_outbound_calling_run(
+            args.run_dir, profile_path=args.profile, config_path=args.config,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
     if args.command == "ingest-initiative-candidates":
         result = ingest_initiative_candidates(args.run_dir, args.database)
         print(json.dumps(result, indent=2, sort_keys=True))
@@ -600,6 +693,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             database_path=args.database,
             content_config_path=args.content_config,
             paid_config_path=args.paid_config,
+            outbound_config_path=args.outbound_config,
             unified_config_path=args.unified_config,
             as_of=args.as_of,
         )
@@ -749,7 +843,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     if args.command == "snapshot-outreach":
-        print(json.dumps(create_outreach_snapshot(args.run_dir, database_path=args.database), indent=2, sort_keys=True))
+        print(json.dumps(create_outreach_snapshot(
+            args.run_dir, database_path=args.database, channel=args.channel,
+        ), indent=2, sort_keys=True))
         return 0
     if args.command == "record-send":
         print(json.dumps(record_send(
@@ -767,7 +863,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(signal_outcome_metrics(args.database), indent=2, sort_keys=True))
         return 0
     if args.command == "export-evidence-bundle":
-        print(json.dumps(export_evidence_bundle(args.run_dir, args.output), indent=2, sort_keys=True))
+        print(json.dumps(export_evidence_bundle(
+            args.run_dir, args.output, channel=args.channel,
+        ), indent=2, sort_keys=True))
         return 0
     if args.command == "ingest-gap-candidates":
         result = ingest_gap_candidates(args.run_dir, args.database)

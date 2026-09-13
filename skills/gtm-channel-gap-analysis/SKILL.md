@@ -195,6 +195,19 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   content hash, observation time, and excerpt; route mixed supporting and
   contradicting evidence to review, and let explicit healthy-channel evidence
   disqualify the gap. No candidates must remain unknown.
+- Treat outbound calling as a separate reviewed channel, not as a synonym for
+  general sales motion. Buyer coverage, operating scale, conversion paths, and
+  customer proof establish only readiness. Require at least two distinct,
+  approved outbound gap types before qualification; public silence about an
+  internal calling program remains unknown.
+- At both export and standalone scoring time, revalidate outbound observations
+  against the exact saved Scrapling URL, content hash, observation time, and
+  excerpt. Validate signal polarity against the configured support and
+  contradiction sets so an edited profile cannot invert meaning.
+- Count distinct conversion-path types for readiness, not the number of URLs;
+  repeated demo or contact links otherwise inflate the score. Freeze named
+  readiness factors in outreach snapshots so outcome analysis can calibrate
+  signal usefulness later.
 - Collect hiring through three separately attributed sources: LinkedIn Jobs via
   Deepline/HarvestAPI using an authoritative LinkedIn company ID, Google for
   Jobs via Deepline/OpenWebNinja with exact employer-name or employer-domain

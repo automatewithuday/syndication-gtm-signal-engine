@@ -69,8 +69,9 @@ unknown. A high total with low evidence confidence does not qualify
 automatically.
 
 The gap-resolution workflow rediscovers and idempotently ingests deterministic
-candidates, then exports only human approvals tied to the current run and page
-content hash. It rebuilds content, paid-channel, unified, and account-report
+candidates for content syndication, retargeting, programmatic, and outbound
+calling, then exports only human approvals tied to the current run and page
+content hash. It rebuilds content, paid-channel, outbound, unified, and account-report
 artifacts locally without making provider calls. Pending evidence is
 `review_required`; an empty queue is `insufficient_evidence`.
 

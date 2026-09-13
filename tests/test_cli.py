@@ -236,6 +236,35 @@ class CliTests(unittest.TestCase):
             exit_code = cli.main(["enrich-company-funding", "example.com"])
         self.assertEqual(1, exit_code)
 
+    def test_outbound_scoring_arguments_reach_scorer(self):
+        with patch.object(cli, "score_outbound_calling_run", return_value={}) as mocked, \
+             patch("builtins.print"):
+            exit_code = cli.main([
+                "score-outbound-calling", "run", "--profile", "gap.json",
+                "--config", "outbound.json",
+            ])
+        self.assertEqual(0, exit_code)
+        self.assertEqual(Path("run"), mocked.call_args.args[0])
+        self.assertEqual(Path("gap.json"), mocked.call_args.kwargs["profile_path"])
+        self.assertEqual(Path("outbound.json"), mocked.call_args.kwargs["config_path"])
+
+    def test_outbound_bundle_channel_reaches_exporter(self):
+        with patch.object(cli, "export_evidence_bundle", return_value={}) as mocked, \
+             patch("builtins.print"):
+            cli.main([
+                "export-evidence-bundle", "run", "--output", "bundle.json",
+                "--channel", "outbound_calling",
+            ])
+        self.assertEqual("outbound_calling", mocked.call_args.kwargs["channel"])
+
+    def test_outbound_snapshot_channel_reaches_validation(self):
+        with patch.object(cli, "create_outreach_snapshot", return_value={}) as mocked, \
+             patch("builtins.print"):
+            cli.main([
+                "snapshot-outreach", "run", "--channel", "outbound_calling",
+            ])
+        self.assertEqual("outbound_calling", mocked.call_args.kwargs["channel"])
+
 
 if __name__ == "__main__":
     unittest.main()

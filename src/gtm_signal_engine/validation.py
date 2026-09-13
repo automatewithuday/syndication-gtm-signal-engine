@@ -18,6 +18,27 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _component_evidence(components: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Normalize frozen component inputs into signal-bearing outcome evidence."""
+    result: dict[str, list[dict[str, Any]]] = {}
+    for component_name, component in components.items():
+        items = list(component.get("evidence", []))
+        if component_name == "readiness" and not items:
+            items = [
+                {
+                    "signal": factor.get("id"),
+                    "state": factor.get("state"),
+                    "observed": factor.get("observed"),
+                    "confidence": factor.get("confidence"),
+                    "source": factor.get("source"),
+                }
+                for factor in component.get("factors", [])
+                if factor.get("state") == "observed"
+            ]
+        result[component_name] = items
+    return result
+
+
 def review_classification(
     run_dir: Path,
     *,
@@ -62,13 +83,34 @@ def create_outreach_snapshot(
     run_dir: Path,
     *,
     database_path: Path = DEFAULT_DATABASE_PATH,
+    channel: str = "content_syndication",
 ) -> dict[str, Any]:
-    review = json.loads((run_dir / "normalized/account_review.json").read_text(encoding="utf-8"))
-    score = json.loads((run_dir / "normalized/syndication_score.json").read_text(encoding="utf-8"))
-    if review["overall"]["snapshot_id"] != score["snapshot_id"]:
-        raise ValueError("account review and score snapshot do not match")
-    snapshot_id = score["snapshot_id"]
-    evidence = review["signals"]
+    if channel == "outbound_calling":
+        score = json.loads(
+            (run_dir / "normalized/unified_account_score.json").read_text(encoding="utf-8")
+        )
+        channel_score = score.get("channels", {}).get(channel, {})
+        if channel_score.get("status") != "qualified":
+            raise ValueError("outbound outreach snapshot requires a qualified channel")
+        snapshot_id = score["snapshot_id"]
+        evidence = _component_evidence(channel_score["components"])
+        account = score["account"]
+        run_id = score["input"]["run_id"]
+        scoring_version = score["scoring_version"]
+        stored_score = channel_score
+    elif channel == "content_syndication":
+        review = json.loads((run_dir / "normalized/account_review.json").read_text(encoding="utf-8"))
+        score = json.loads((run_dir / "normalized/syndication_score.json").read_text(encoding="utf-8"))
+        if review["overall"]["snapshot_id"] != score["snapshot_id"]:
+            raise ValueError("account review and score snapshot do not match")
+        snapshot_id = score["snapshot_id"]
+        evidence = review["signals"]
+        account = review["account"]
+        run_id = review["run"]["run_id"]
+        scoring_version = score["scoring_version"]
+        stored_score = score
+    else:
+        raise ValueError("channel must be content_syndication or outbound_calling")
     timestamp = _now()
     with connect_database(database_path) as connection:
         connection.execute(
@@ -76,10 +118,11 @@ def create_outreach_snapshot(
                snapshot_id, account_domain, channel, run_id, scoring_version,
                score_json, evidence_json, created_at
                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (snapshot_id, review["account"]["domain"], score["channel"], review["run"]["run_id"],
-             score["scoring_version"], json.dumps(score, sort_keys=True), json.dumps(evidence, sort_keys=True), timestamp),
+            (snapshot_id, account["domain"], channel, run_id,
+             scoring_version, json.dumps(stored_score, sort_keys=True),
+             json.dumps(evidence, sort_keys=True), timestamp),
         )
-    return {"snapshot_id": snapshot_id, "account": review["account"], "channel": score["channel"]}
+    return {"snapshot_id": snapshot_id, "account": account, "channel": channel}
 
 
 def record_send(
@@ -183,11 +226,19 @@ def signal_outcome_metrics(database_path: Path = DEFAULT_DATABASE_PATH) -> list[
     aggregates: dict[tuple[str, str], dict[str, Any]] = {}
     for (_, channel), item in by_send.items():
         evidence = item["evidence"]
+        def identities(values: list[dict[str, Any]]) -> set[str]:
+            return {
+                str(value.get("signal") or value.get("signal_type") or value.get("id"))
+                for value in values
+                if value.get("signal") or value.get("signal_type") or value.get("id")
+            }
         signals = {
-            *(f"fit:{value.get('signal')}" for value in evidence.get("fit", [])),
-            *(f"readiness:{value.get('signal')}" for value in evidence.get("readiness", [])),
-            *(f"gap:{value.get('signal_type', 'reviewed_gap')}" for value in evidence.get("gap", [])),
-            *(f"trigger:{value.get('signal_type')}" for value in evidence.get("reviewed_initiatives", [])),
+            *(f"fit:{value}" for value in identities(evidence.get("fit", []))),
+            *(f"readiness:{value}" for value in identities(evidence.get("readiness", []))),
+            *(f"gap:{value}" for value in identities(evidence.get("gap", []))),
+            *(f"trigger:{value}" for value in identities(
+                evidence.get("reviewed_initiatives", []) + evidence.get("trigger", [])
+            )),
         }
         for signal in signals:
             if signal.endswith(":None"):

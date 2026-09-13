@@ -249,7 +249,7 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 180 tests.
+The complete deterministic suite passes 195 tests.
 
 ## Current account-specific collection policy
 
@@ -257,3 +257,23 @@ ColdIQ Meta enrichment is explicitly skipped by user decision. The pipeline
 persists this as `not_collected_by_decision`; it is not a zero, blocker, or
 absence claim. Historical raw/provider artifacts remain immutable for audit,
 while future ColdIQ runs should pass `--skip-ad-platform meta`.
+
+## Phase 3.10 — Outbound-calling channel completion
+
+Complete for the local V1 scope. Outbound calling now participates in the same
+exact-run workflow as the other three channels: deterministic candidate
+discovery, idempotent SQLite review history, current-run/content-hash export,
+versioned scoring, unified account scoring, account reporting, evidence bundles,
+and frozen outcome snapshots.
+
+Readiness is based on buyer coverage, sales motion, operating scale, distinct
+sales conversion-path types, and customer proof. A high readiness score never
+substitutes for gap evidence. Two distinct approved supporting gap types are
+required; contradictory evidence disqualifies, mixed evidence routes to review,
+and no evidence remains unknown.
+
+Provider-free authoritative replays produced readiness 78.7 for DailyPay and
+84.8 for ColdIQ. Both outbound totals remain null because neither saved run has
+approved outbound-gap evidence. The full four-channel resolver made no paid
+provider request. Validation is recorded in
+`docs/validation/2026-09-14-outbound-calling.md`.

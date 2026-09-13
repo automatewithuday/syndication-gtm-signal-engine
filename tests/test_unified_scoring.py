@@ -158,7 +158,9 @@ class UnifiedScoringTests(unittest.TestCase):
             self.assertIsNone(first["channels"]["content_syndication"]["total"])
             self.assertIn("gap", first["channels"]["content_syndication"]["blockers"])
             self.assertEqual("insufficient_evidence", first["qualification"]["opportunity_status"])
-            self.assertEqual("unified_scorer_v1", first["scoring_logic_version"])
+            self.assertEqual("unified_scorer_v2", first["scoring_logic_version"])
+            self.assertIn("outbound_calling", first["channels"])
+            self.assertIsNone(first["channels"]["outbound_calling"]["total"])
             self.assertEqual(first["snapshot_id"], second["snapshot_id"])
             with connect_database(database) as connection:
                 rows = connection.execute("SELECT * FROM unified_account_scores").fetchall()
@@ -238,7 +240,7 @@ class UnifiedScoringTests(unittest.TestCase):
                 rows = connection.execute(
                     "SELECT scoring_logic_version FROM unified_account_scores"
                 ).fetchall()
-            self.assertEqual(["unified_scorer_v1"], [row[0] for row in rows])
+            self.assertEqual(["unified_scorer_v2"], [row[0] for row in rows])
 
     def test_rejects_cached_company_from_another_domain(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -253,6 +255,35 @@ class UnifiedScoringTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "does not match"):
                 score_unified_account_run(run_dir, database)
+
+    def test_outbound_artifact_enters_unified_channel_qualification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            database = root / "scores.sqlite3"
+            _seed_account(database)
+            run_dir = _seed_run(root)
+            _write(run_dir / "normalized/outbound_calling_score.json", {
+                "snapshot_id": "outbound-snapshot",
+                "components": {
+                    "readiness": {
+                        "score": 85, "confidence": 0.85,
+                        "state": "observed", "status": "provisional_pass",
+                    },
+                    "gap": {
+                        "score": 75, "confidence": 0.85,
+                        "state": "observed", "status": "provisional_pass",
+                    },
+                },
+            })
+
+            result = score_unified_account_run(
+                run_dir, database, as_of=date(2026, 9, 13)
+            )
+
+            outbound = result["channels"]["outbound_calling"]
+            self.assertIsNotNone(outbound["total"])
+            self.assertEqual("qualified", outbound["status"])
+            self.assertIn("outbound_calling", result["qualification"]["qualified_channels"])
 
 
 if __name__ == "__main__":

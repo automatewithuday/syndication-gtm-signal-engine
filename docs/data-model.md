@@ -88,6 +88,22 @@ Append-only approve/reject decisions with reviewer, notes, decision time, and
 approval strength/confidence. A review references the exact candidate
 occurrence so later page changes cannot inherit approval.
 
+### `outbound_gap_candidates`, occurrences, and reviews
+
+Outbound-calling candidates use a separate three-table review queue with the
+same stable-candidate/exact-occurrence/append-only-review separation. Export and
+standalone scoring both re-bind approvals to the current Scrapling URL, content
+hash, observation time, and excerpt. Signal polarity is validated against the
+versioned outbound configuration.
+
+### `outbound_calling_score.json`
+
+Run-local, versioned four-component score for fit, outbound readiness, reviewed
+gap evidence, and business trigger. Readiness records named factors and counts
+distinct conversion-path types. The total remains null whenever a required
+component is unknown. Snapshot identity uses stable upstream semantic IDs rather
+than processing timestamps.
+
 ### `initiative_candidates`
 
 Stable campaign, hiring, or new-channel candidate identity with account,
@@ -137,7 +153,9 @@ signal type, original value, reviewer, and rationale.
 ### `outreach_snapshots`, `outreach_sends`, and `outreach_outcomes`
 
 Immutable score/evidence snapshots at send time, idempotent send references,
-and downstream events used for channel- and signal-level validation.
+and downstream events used for channel- and signal-level validation. Outbound
+snapshots normalize observed readiness factors into named signals so their
+meeting and opportunity rates can be evaluated after authorized sends.
 
 ## Evidence state
 

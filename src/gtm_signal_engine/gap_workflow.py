@@ -13,11 +13,17 @@ from .gap_discovery import discover_gap_candidates
 from .paid_channel_scoring import score_paid_channel_run
 from .paid_gap import discover_paid_gap_candidates
 from .paid_gap_review import export_paid_gap_profile, ingest_paid_gap_candidates
+from .outbound_calling import (
+    discover_outbound_gap_candidates,
+    export_outbound_gap_profile,
+    ingest_outbound_gap_candidates,
+    score_outbound_calling_run,
+)
 from .review_queue import DEFAULT_DATABASE_PATH, connect_database, export_gap_profile, ingest_gap_candidates
 from .syndication_scoring import score_syndication_run
 from .unified_scoring import score_unified_account_run
 
-WORKFLOW_VERSION = "channel_gap_resolution_v1"
+WORKFLOW_VERSION = "channel_gap_resolution_v2"
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -28,6 +34,10 @@ def _current_candidates(run_dir: Path, database_path: Path) -> list[dict[str, An
     sources = (
         ("gap_candidates.jsonl", "gap_candidates", "content_syndication", "suggested_polarity"),
         ("paid_gap_candidates.jsonl", "paid_gap_candidates", None, "suggested_position"),
+        (
+            "outbound_gap_candidates.jsonl", "outbound_gap_candidates",
+            "outbound_calling", "suggested_position",
+        ),
     )
     result: list[dict[str, Any]] = []
     with connect_database(database_path) as connection:
@@ -63,6 +73,7 @@ def resolve_channel_gaps(
     database_path: Path = DEFAULT_DATABASE_PATH,
     content_config_path: Path | None = None,
     paid_config_path: Path | None = None,
+    outbound_config_path: Path | None = None,
     unified_config_path: Path | None = None,
     as_of: date | None = None,
 ) -> dict[str, Any]:
@@ -80,8 +91,10 @@ def resolve_channel_gaps(
 
     content_discovery = discover_gap_candidates(run_dir)
     paid_discovery = discover_paid_gap_candidates(run_dir)
+    outbound_discovery = discover_outbound_gap_candidates(run_dir)
     content_ingestion = ingest_gap_candidates(run_dir, database_path)
     paid_ingestion = ingest_paid_gap_candidates(run_dir, database_path)
+    outbound_ingestion = ingest_outbound_gap_candidates(run_dir, database_path)
     candidates = _current_candidates(run_dir, database_path)
     review_counts = dict(sorted(Counter(item["review_status"] for item in candidates).items()))
 
@@ -98,6 +111,12 @@ def resolve_channel_gaps(
     )
     paid = score_paid_channel_run(
         run_dir, Path(paid_profile["output"]), paid_config_path
+    )
+    outbound_profile = export_outbound_gap_profile(
+        run_dir, account_name=selected_name, database_path=database_path
+    )
+    outbound = score_outbound_calling_run(
+        run_dir, Path(outbound_profile["output"]), outbound_config_path
     )
     unified = score_unified_account_run(
         run_dir, database_path=database_path, config_path=unified_config_path,
@@ -119,6 +138,12 @@ def resolve_channel_gaps(
                 "opportunity_status": unified["channels"][channel].get("status"),
             }
             for channel, details in paid["channels"].items()
+        },
+        "outbound_calling": {
+            "gap_score": outbound["components"]["gap"].get("score"),
+            "gap_status": outbound["components"]["gap"].get("status"),
+            "opportunity_total": unified["channels"]["outbound_calling"].get("total"),
+            "opportunity_status": unified["channels"]["outbound_calling"].get("status"),
         },
     }
     pending = int(review_counts.get("pending", 0))
@@ -149,10 +174,12 @@ def resolve_channel_gaps(
         "discovery": {
             "content_syndication": content_discovery,
             "paid_channels": paid_discovery,
+            "outbound_calling": outbound_discovery,
         },
         "ingestion": {
             "content_syndication": content_ingestion,
             "paid_channels": paid_ingestion,
+            "outbound_calling": outbound_ingestion,
         },
         "review_counts": review_counts,
         "review_queue": candidates,
