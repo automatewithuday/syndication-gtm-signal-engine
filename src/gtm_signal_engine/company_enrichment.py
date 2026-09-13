@@ -358,6 +358,8 @@ def enrich_company(
             "google_search": domain,
         },
         "request_policy": {
+            "provider_gateway": "deepline",
+            "direct_provider_api_calls": False,
             "cache_reuse_default": True,
             "refresh_requires_explicit_flag": True,
             "automatic_paid_retries": False,

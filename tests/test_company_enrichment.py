@@ -74,6 +74,8 @@ class CompanyEnrichmentTests(unittest.TestCase):
             self.assertEqual(
                 "blocked_provider_unavailable", first["funding"]["status"]
             )
+            self.assertEqual("deepline", first["request_policy"]["provider_gateway"])
+            self.assertFalse(first["request_policy"]["direct_provider_api_calls"])
             self.assertEqual(4, len(runner.calls))
             self.assertTrue(Path(first["source_snapshots"][0]["raw_payload_path"]).is_file())
 

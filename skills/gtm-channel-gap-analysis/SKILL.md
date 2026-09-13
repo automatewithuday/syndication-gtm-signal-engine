@@ -24,6 +24,9 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   numeric LinkedIn company ID for LinkedIn jobs. Reuse the cached record by
   default; require an explicit refresh before repurchasing firmographics.
 - Use Prospeo through Deepline as the primary mechanical firmographic source.
+  Never call Prospeo's API directly. Treat Prospeo's public documentation as
+  semantic reference and Deepline's live Prospeo tool schema as the executable
+  contract, billing surface, and source of truth when the two differ.
   If Prospeo returns a LinkedIn URL without its numeric ID, use a free exact-domain
   identity resolver and persist the merged identifiers. Keep Crunchbase funding
   as a separate required source rather than treating Prospeo funding as final.

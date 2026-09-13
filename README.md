@@ -98,10 +98,13 @@ row stores only the normalized company profile and field provenance.
 For an already-known domain, use `prospeo_enrich_company`; do not run a company
 search merely to recover the same firmographics. Prospeo's
 [company-search filters](https://prospeo.io/api-docs/filters-documentation) are
-reserved for a later account-discovery/prequalification stage. Their hiring,
-funding, technology, news, growth, and website filters may select which accounts
-enter the pipeline, but final scores still require the corresponding stored
-source evidence.
+upstream semantic documentation only: every Prospeo operation in this project
+must execute through its connected Deepline tool, and Deepline's live tool
+schema is authoritative when it differs. Company-search filters are reserved
+for a later account-discovery/prequalification stage. Their hiring, funding,
+technology, news, growth, and website filters may select which accounts enter
+the pipeline, but final scores still require the corresponding stored source
+evidence.
 
 After account enrichment, the workflow runs Scrapling website analysis, Deepline/BuiltWith, all three
 Deepline/Adyntel channels, local creative analysis, `paid_channels_v3`, and a

@@ -852,15 +852,30 @@ coverage rather than raw page count.
 
 ### 2026-09-13 — Prospeo search filters are sourcing criteria, not duplicate enrichment
 
+- Prospeo is accessed only through Deepline. The public Prospeo documentation
+  describes upstream filter semantics; it does not authorize direct Prospeo API
+  requests. Every execution must use a connected Deepline Prospeo tool and
+  preserve Deepline billing and provider-envelope provenance.
+- A live, read-only Deepline contract inspection confirmed that
+  `prospeo_search_company` is connected with managed credentials and is priced
+  at 0.55 Deepline credits ($0.055) per returned result. No search was executed.
+- Deepline's current adapter exposes a narrower contract than the latest
+  Prospeo page. It includes core firmographic, funding, technology, headcount
+  growth, hiring-title/count, department-headcount, MX-provider, and pagination
+  fields, but not the documented news, intent, website-search, traffic,
+  key-executive, ICP, product/service, integration, award, or language filters.
+  It also represents some inputs differently, including hiring titles as an
+  array and company type as a scalar enum. Code must validate against Deepline's
+  live schema and must not forward undocumented fields directly to Prospeo.
 - The official Prospeo filter documentation distinguishes `/search-company`
   filters from per-company enrichment. A known domain continues through the
   cached `prospeo_enrich_company` identity gate; calling company search for that
   same account would add cost and a second, unnecessary source path.
 - A future account-discovery stage can use Prospeo filters for company identity,
   location, headcount/range, industry, revenue, type, founding year, headcount
-  growth, technologies, active job titles/count, funding stage/date/amount and
-  investors, recent news, website traffic/structure, ICP, products/services,
-  integrations, and operating languages.
+  growth, technologies, active job titles/count, and funding stage/date/amount.
+  Newer upstream filters may be added only after they appear in Deepline's live
+  contract.
 - `company_funding`, `company_technology`, `company_job_posting_hiring_for`, and
   `company_job_posting_quantity` require at least Prospeo Starter. Website
   full-text/structure search, Google discovery, key-executive events, and
