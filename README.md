@@ -27,7 +27,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 171-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 175-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -526,6 +526,7 @@ uv run gtm-signals enqueue-batch accounts.jsonl
 uv run gtm-signals list-jobs --status pending
 uv run gtm-signals run-pending-jobs --workers 2
 uv run gtm-signals run-job <job-id>
+uv run gtm-signals build-portfolio-report --output reports/account_portfolio.json
 ```
 
 Each CSV/JSONL row accepts the single-account crawl fields plus
@@ -543,6 +544,12 @@ rejected. The normalized request stores `account_job_v2` and
 `account_pipeline_v2`, and its complete JSON becomes the idempotency key. This
 makes a batch's collection budgets and retry authority reproducible rather than
 depending on CLI defaults at execution time.
+
+The portfolio command is provider-free and writes JSON, CSV, and Markdown. It
+keeps one current row per domain, retains the count of historical job policies,
+ranks known priority scores above unknown scores, and shows channel opportunity
+status separately. A high-priority account with an unknown gap is therefore not
+misrepresented as qualified.
 
 Record validation and downstream outcomes without sending outreach:
 

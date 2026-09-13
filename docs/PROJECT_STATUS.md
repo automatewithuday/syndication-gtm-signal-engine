@@ -195,6 +195,18 @@ version in the hashed normalized request, so the job identity captures the
 execution contract. Ambiguous boolean values are rejected during enqueue.
 Legacy saved jobs remain executable with safe zero-acquisition defaults.
 
+## Phase 3.9 — Portfolio ranking output
+
+Complete for the local V1 scope. `build-portfolio-report` converts persisted
+analysis jobs and account reports into a stable JSON/CSV/Markdown analyst view.
+It selects the latest policy run per domain, records job history, ranks only
+known priority scores, preserves missing/malformed reports as unavailable rows,
+and displays channel qualification separately from account priority.
+
+A provider-free replay over the authoritative DailyPay and ColdIQ reports
+ranked DailyPay 91.7 above ColdIQ 88.6 while retaining both opportunity states
+as `insufficient_evidence`. No provider was called.
+
 ## Phase 4 — Validation and learning
 
 Complete as validation infrastructure. Exact-run/content-hash review supports
@@ -232,7 +244,7 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 171 tests.
+The complete deterministic suite passes 175 tests.
 
 ## Current account-specific collection policy
 

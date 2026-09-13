@@ -187,6 +187,17 @@ class CliTests(unittest.TestCase):
         self.assertTrue(mocked.call_args.kwargs["retry_gap_evidence"])
         self.assertEqual(Path("data/gtm_signal_engine.sqlite3"), mocked.call_args.kwargs["database_path"])
 
+    def test_portfolio_report_arguments_reach_builder(self):
+        with patch.object(cli, "build_portfolio_report", return_value={}) as mocked, \
+             patch("builtins.print"):
+            exit_code = cli.main([
+                "build-portfolio-report", "--database", "jobs.sqlite3",
+                "--output", "reports/ranked.json",
+            ])
+        self.assertEqual(0, exit_code)
+        self.assertEqual(Path("jobs.sqlite3"), mocked.call_args.kwargs["database_path"])
+        self.assertEqual(Path("reports/ranked.json"), mocked.call_args.kwargs["output_path"])
+
     def test_company_enrichment_arguments_reach_cache_layer(self):
         result = {"domain": "example.com", "status": "partial"}
         with patch.object(cli, "enrich_company", return_value=result) as mocked, \

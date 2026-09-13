@@ -59,6 +59,7 @@ stays unknown because configured providers did not resolve it conclusively.
 | Idempotent/resumable jobs | stable request hash, account/stage transitions, saved-run replay without repurchase | Pass |
 | Concurrency/rate limit/retries/cost | bounded workers, crawl delay, Scrapling retries, cost field | Pass |
 | CSV/JSONL batches | `enqueue-batch`, `run-pending-jobs` | Pass |
+| Portfolio decision view | `build-portfolio-report` JSON/CSV/Markdown with one current row per domain | Pass |
 | Provider mocks/end-to-end fixtures | recorded provider fixtures, complete workflow tests, and five-account live acceptance | Pass |
 | Qualified evidence export | snapshot-checked `export-evidence-bundle` with hard qualification gate | Pass |
 
@@ -89,7 +90,7 @@ is ready to learn once authorized campaigns generate a meaningful sample.
 
 ## Verification record
 
-- Full suite: 171 tests passed in the latest verification run; paid APIs are
+- Full suite: 175 tests passed in the latest verification run; paid APIs are
   replaced by recorded payloads or fakes in tests.
 - Python compile check and `git diff --check`: pass.
 - Wheel build: pass.

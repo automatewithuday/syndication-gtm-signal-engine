@@ -172,6 +172,10 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   pipeline version, provider exclusions, collection budgets, and retry intent.
   Reject ambiguous boolean policy and let legacy jobs default to no additional
   gap acquisition rather than inheriting new live-request behavior.
+- Build portfolio views from the latest persisted job per canonical domain and
+  retain older job-policy counts for audit. Rank only known priority scores,
+  keep unavailable reports visible, and present account priority separately
+  from channel qualification.
 - When an analyst supplies an exact high-value target, require it to exist in
   the saved discovery inventory and enqueue it before ordinary targets so the
   explicit priority cannot be lost to a previously queued copy.

@@ -121,6 +121,14 @@ start/end time, and last update. This mirrors the run-local
 `normalized/account_pipeline.json` state into SQLite and makes interrupted
 provider workflows auditable and resumable.
 
+### `account_portfolio.{json,csv,md}`
+
+Provider-free derived views over the latest persisted job for each canonical
+domain. They retain job/report availability, priority score, evidence coverage,
+confidence, channel statuses, blockers, cost, and historical-job count. The
+snapshot hash excludes output paths and generation time. Priority ordering does
+not override channel qualification.
+
 ### `classification_reviews`
 
 Agree/disagree/correct decisions bound to an exact run, page URL, content hash,

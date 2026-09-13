@@ -58,6 +58,7 @@ from .account_pipeline import run_account_v1
 from .unified_scoring import score_unified_account_run
 from .gap_workflow import resolve_channel_gaps
 from .gap_acquisition import acquire_gap_evidence, build_gap_target_plan
+from .portfolio_report import build_portfolio_report
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -311,6 +312,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_batch.add_argument("--output-dir", type=Path, default=Path("data/runs"))
     run_batch.add_argument("--report-dir", type=Path, default=Path("reports"))
     run_batch.add_argument("--workers", type=int, default=1)
+    portfolio = subparsers.add_parser(
+        "build-portfolio-report",
+        help="Rank persisted account jobs without confusing priority with qualification",
+    )
+    portfolio.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    portfolio.add_argument("--output", type=Path, default=Path("reports/account_portfolio.json"))
     run_account = subparsers.add_parser(
         "run-account-v1", help="Run or resume the complete website, technology, ads, creative, and scoring workflow"
     )
@@ -687,6 +694,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0 if all(item["status"] != "failed" for item in result) else 1
+    if args.command == "build-portfolio-report":
+        result = build_portfolio_report(
+            database_path=args.database, output_path=args.output,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
     if args.command == "run-account-v1":
         result = run_account_v1(
             args.domain, account_name=args.account_name, output_root=args.output_dir,

@@ -997,3 +997,18 @@ coverage rather than raw page count.
 - Added a real-company example batch for DailyPay and ColdIQ. ColdIQ retains
   the user-directed Meta exclusion as request policy, not a zero observation.
 - Validation: `docs/validation/2026-09-13-batch-gap-policy.md`.
+
+### 2026-09-13 — Batch results become a priority portfolio, not a qualification shortcut
+
+- Added `build-portfolio-report` to turn saved SQLite jobs and account reports
+  into JSON, CSV, and Markdown without any provider call.
+- Multiple job policies can exist for one domain. The portfolio selects the
+  latest updated job as current and reports the history count instead of
+  presenting duplicate accounts as separate prospects.
+- Accounts with missing or malformed reports remain visible as unavailable and
+  sort below known priority scores. They are not silently dropped or scored as
+  zero.
+- Priority score, evidence coverage, confidence, and channel qualification are
+  separate output columns. The real-account replay ranks DailyPay 91.7 above
+  ColdIQ 88.6, but both remain `insufficient_evidence` opportunities.
+- Validation: `docs/validation/2026-09-13-portfolio-report.md`.
