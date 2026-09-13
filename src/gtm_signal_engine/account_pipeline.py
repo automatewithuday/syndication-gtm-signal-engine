@@ -16,6 +16,7 @@ from .paid_gap import discover_paid_gap_candidates
 from .job_collection import collect_deepline_jobs
 from .review_queue import DEFAULT_DATABASE_PATH
 from .unified_scoring import score_unified_account_run
+from .gap_workflow import resolve_channel_gaps
 from .workflow import analyze_saved_run, crawl_and_analyze
 
 StageCallback = Callable[[str, str, dict[str, Any]], None]
@@ -50,6 +51,7 @@ def run_account_v1(
     jobs_collector: Collector | None = None,
     company_enricher: Collector | None = None,
     unified_scorer: Collector | None = score_unified_account_run,
+    gap_resolver: Collector | None = resolve_channel_gaps,
     database_path: Path = DEFAULT_DATABASE_PATH,
     refresh_company: bool = False,
 ) -> dict[str, Any]:
@@ -149,12 +151,18 @@ def run_account_v1(
     checkpoint("website", "completed" if website["run"].get("status") != "failed" else "partial", {"run_dir": str(run_dir)})
 
     if (run_dir / "normalized" / "pages.jsonl").is_file():
+        content_gaps = discover_gap_candidates(run_dir)
         initiatives = discover_initiative_candidates(run_dir)
         paid_gaps = discover_paid_gap_candidates(run_dir)
         checkpoint("business_signal_discovery", "completed", {
+            "content_gap_candidates": content_gaps["candidate_count"],
             "initiative_candidates": initiatives["candidate_count"],
             "paid_gap_candidates": paid_gaps["candidate_count"],
-            "review_required": bool(initiatives["candidate_count"] or paid_gaps["candidate_count"]),
+            "review_required": bool(
+                content_gaps["candidate_count"]
+                or initiatives["candidate_count"]
+                or paid_gaps["candidate_count"]
+            ),
         })
     else:
         checkpoint("business_signal_discovery", "partial", {
@@ -285,7 +293,23 @@ def run_account_v1(
         state["blockers"].append("Paid scoring unavailable: normalized external profile is missing")
         checkpoint("paid_scoring", "partial", {"reason": "external profile missing"})
 
-    if unified_scorer is not None:
+    if gap_resolver is not None and profile_path.is_file():
+        resolution = gap_resolver(
+            run_dir, account_name=account_name, database_path=database_path
+        )
+        checkpoint("channel_gap_resolution", "completed", {
+            "resolution_status": resolution["status"],
+            "review_counts": resolution["review_counts"],
+            "channels": resolution["channels"],
+        })
+        unified = resolution["unified_account_score"]
+        checkpoint("unified_scoring", "completed", {
+            "priority_score": unified["priority"]["score"],
+            "priority_status": unified["priority"]["status"],
+            "opportunity_status": unified["opportunity_status"],
+            "snapshot_id": unified["snapshot_id"],
+        })
+    elif unified_scorer is not None:
         unified = unified_scorer(run_dir, database_path=database_path)
         checkpoint("unified_scoring", "completed", {
             "scoring_version": unified["scoring_version"],

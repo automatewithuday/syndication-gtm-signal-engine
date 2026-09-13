@@ -149,6 +149,14 @@ readiness, gap, and trigger evidence; missing gap evidence keeps their total
 null and blocks qualification. The scoring configuration is provisional until
 outcome labels support calibration.
 
+The channel-gap resolution loop is now connected to the full account pipeline.
+It automatically discovers and ingests content-syndication, retargeting, and
+programmatic candidates into their separate SQLite queues. A provider-free
+replay exports only exact-run/hash-bound approvals and rebuilds content, paid,
+unified, and decision-report scores. It distinguishes `review_required` from
+`insufficient_evidence`, so an empty review queue is never presented as work a
+reviewer can approve or as proof that the channel is unused.
+
 ## Phase 4 — Validation and learning
 
 Complete as validation infrastructure. Exact-run/content-hash review supports
@@ -186,7 +194,7 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 158 tests.
+The complete deterministic suite passes 160 tests.
 
 ## Current account-specific collection policy
 

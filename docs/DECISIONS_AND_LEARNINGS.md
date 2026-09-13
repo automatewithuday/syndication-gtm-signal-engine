@@ -915,3 +915,22 @@ coverage rather than raw page count.
   confidence (`high_priority`), and ColdIQ 88.6 priority, 81.2% coverage, and
   58.9% confidence (`review`). Funding and all three channel gaps remain
   unknown for both accounts. No paid provider calls were made.
+
+### 2026-09-13 — Channel-gap review becomes a single replayable stage
+
+- Added `resolve-channel-gaps` to connect deterministic content and paid-gap
+  discovery, idempotent SQLite ingestion, exact-run review export, all dependent
+  scorers, and the account intelligence report. The full account pipeline now
+  invokes the same stage after ad creative analysis.
+- The workflow never approves rule matches automatically. Only human approvals
+  bound to the current run and page content hash enter scoring; rejected and
+  stale approvals remain historical audit records.
+- Status semantics now distinguish work that is actually reviewable from absent
+  evidence: pending candidates or conflicting approved evidence produce
+  `review_required`, while an empty queue with unknown gaps produces
+  `insufficient_evidence`.
+- A deterministic integration fixture verifies that approved content and
+  retargeting evidence updates only those channels while programmatic stays
+  unknown. DailyPay and ColdIQ replays produced zero current candidates and all
+  null channel totals, with priority scores unchanged at 91.7 and 88.6. No paid
+  provider calls were made.

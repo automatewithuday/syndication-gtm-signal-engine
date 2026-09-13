@@ -58,24 +58,33 @@ class AccountPipelineTests(unittest.TestCase):
                 (saved / "normalized" / "job_postings.jsonl").write_text("")
                 return SimpleNamespace(incomplete=False, records=[], warnings=[])
 
-            def unified(saved, **kwargs):
-                calls.append(("unified", str(saved)))
+            def resolve_gaps(saved, **kwargs):
+                calls.append(("gaps", str(saved)))
                 score = {
                     "scoring_version": "unified_account_v1",
                     "priority": {"score": 75, "status": "high_priority"},
                     "qualification": {"opportunity_status": "insufficient_evidence"},
                 }
                 _write(saved / "normalized" / "unified_account_score.json", score)
-                return score
+                return {
+                    "status": "insufficient_evidence", "review_counts": {},
+                    "channels": {},
+                    "unified_account_score": {
+                        "snapshot_id": "snapshot", "priority": score["priority"],
+                        "opportunity_status": "insufficient_evidence",
+                    },
+                }
 
             result = run_account_v1(
                 "example.com", account_name="Input Example", run_dir=run_dir,
-                company_enricher=company, jobs_collector=jobs, unified_scorer=unified,
+                company_enricher=company, jobs_collector=jobs,
+                unified_scorer=lambda *_args, **_kwargs: self.fail("fallback scorer ran"),
+                gap_resolver=resolve_gaps,
             )
             self.assertEqual([
                 ("company", "example.com"),
                 ("jobs", "123", "Canonical Example"),
-                ("unified", str(run_dir)),
+                ("gaps", str(run_dir)),
             ], calls)
             self.assertEqual("completed", result["pipeline"]["status"])
             reference = json.loads(
@@ -84,6 +93,9 @@ class AccountPipelineTests(unittest.TestCase):
             self.assertEqual("123", reference["identifiers"]["linkedin_company_id"])
             self.assertEqual(
                 "completed", result["pipeline"]["stages"]["unified_scoring"]["status"]
+            )
+            self.assertEqual(
+                "completed", result["pipeline"]["stages"]["channel_gap_resolution"]["status"]
             )
             self.assertEqual(75, result["unified_account_score"]["priority"]["score"])
 
@@ -138,7 +150,7 @@ class AccountPipelineTests(unittest.TestCase):
             result = run_account_v1(
                 "example.com", account_name="Example", output_root=root / "runs",
                 website_runner=website, builtwith_collector=builtwith, adyntel_collector=adyntel,
-                skip_ad_platforms=("meta",), unified_scorer=None,
+                skip_ad_platforms=("meta",), unified_scorer=None, gap_resolver=None,
             )
             self.assertEqual("completed", result["pipeline"]["status"])
             self.assertEqual(0.4, result["provider_cost"]["credits"])
@@ -153,7 +165,7 @@ class AccountPipelineTests(unittest.TestCase):
                 "example.com", account_name="Example", run_dir=run_dir,
                 builtwith_collector=lambda *_args, **_kwargs: self.fail("BuiltWith was repurchased"),
                 adyntel_collector=lambda *_args, **_kwargs: self.fail("Adyntel was repurchased"),
-                skip_ad_platforms=("meta",), unified_scorer=None,
+                skip_ad_platforms=("meta",), unified_scorer=None, gap_resolver=None,
             )
             self.assertEqual("completed", resumed["pipeline"]["status"])
 
@@ -185,7 +197,7 @@ class AccountPipelineTests(unittest.TestCase):
 
             run_account_v1(
                 "example.com", run_dir=run_dir, apify_collector=apify,
-                unified_scorer=None,
+                unified_scorer=None, gap_resolver=None,
             )
             self.assertEqual(["meta"], fallback)
 

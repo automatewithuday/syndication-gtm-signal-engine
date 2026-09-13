@@ -56,6 +56,7 @@ from .validation import (
 from .evidence_bundle import export_evidence_bundle
 from .account_pipeline import run_account_v1
 from .unified_scoring import score_unified_account_run
+from .gap_workflow import resolve_channel_gaps
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -221,6 +222,17 @@ def build_parser() -> argparse.ArgumentParser:
     unified.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
     unified.add_argument("--config", type=Path)
     unified.add_argument("--as-of", type=date.fromisoformat)
+    resolve_gaps = subparsers.add_parser(
+        "resolve-channel-gaps",
+        help="Ingest reviewed gap candidates and rebuild all dependent account scores",
+    )
+    resolve_gaps.add_argument("run_dir", type=Path)
+    resolve_gaps.add_argument("--account-name")
+    resolve_gaps.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
+    resolve_gaps.add_argument("--content-config", type=Path)
+    resolve_gaps.add_argument("--paid-config", type=Path)
+    resolve_gaps.add_argument("--unified-config", type=Path)
+    resolve_gaps.add_argument("--as-of", type=date.fromisoformat)
     deepline = subparsers.add_parser(
         "collect-deepline", help="Collect live Deepline/BuiltWith technology observations"
     )
@@ -533,6 +545,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
+    if args.command == "resolve-channel-gaps":
+        result = resolve_channel_gaps(
+            args.run_dir, account_name=args.account_name,
+            database_path=args.database,
+            content_config_path=args.content_config,
+            paid_config_path=args.paid_config,
+            unified_config_path=args.unified_config,
+            as_of=args.as_of,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
     if args.command == "collect-deepline":
         result = collect_deepline_technologies(args.run_dir, args.domain)
         print(json.dumps({
@@ -629,6 +652,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             company_enricher=enrich_company, database_path=args.database,
             refresh_company=args.refresh_company,
             unified_scorer=score_unified_account_run,
+            gap_resolver=resolve_channel_gaps,
         )
         print(json.dumps({
             "status": result["pipeline"]["status"], "run_dir": result["run"]["run_dir"],

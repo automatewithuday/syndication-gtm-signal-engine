@@ -14,6 +14,7 @@ Account source
   -> account aggregation
   -> six-signal account priority scoring
   -> channel scoring
+  -> exact-run gap review resolution
   -> decision report and human QA
 ```
 
@@ -58,6 +59,12 @@ Score fit, readiness, gap, and trigger separately for each channel. Channel
 totals are configuration-driven and remain null when any required component is
 unknown. A high total with low evidence confidence does not qualify
 automatically.
+
+The gap-resolution workflow rediscovers and idempotently ingests deterministic
+candidates, then exports only human approvals tied to the current run and page
+content hash. It rebuilds content, paid-channel, unified, and account-report
+artifacts locally without making provider calls. Pending evidence is
+`review_required`; an empty queue is `insufficient_evidence`.
 
 ## Production requirements
 

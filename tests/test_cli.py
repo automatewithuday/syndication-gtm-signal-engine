@@ -60,6 +60,18 @@ class CliTests(unittest.TestCase):
         self.assertEqual(Path("scores.sqlite3"), mocked.call_args.kwargs["database_path"])
         self.assertEqual(date(2026, 9, 13), mocked.call_args.kwargs["as_of"])
 
+    def test_gap_resolution_arguments_reach_workflow(self):
+        with patch.object(cli, "resolve_channel_gaps", return_value={}) as mocked, \
+             patch("builtins.print"):
+            cli.main([
+                "resolve-channel-gaps", "run", "--account-name", "Example",
+                "--database", "scores.sqlite3", "--as-of", "2026-09-13",
+            ])
+        self.assertEqual(Path("run"), mocked.call_args.args[0])
+        self.assertEqual("Example", mocked.call_args.kwargs["account_name"])
+        self.assertEqual(Path("scores.sqlite3"), mocked.call_args.kwargs["database_path"])
+        self.assertEqual(date(2026, 9, 13), mocked.call_args.kwargs["as_of"])
+
     def test_deepline_arguments_reach_live_collector(self):
         result = SimpleNamespace(
             provider="deepline", records=[], raw_payload_location="raw/deepline.json",
@@ -133,6 +145,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(("meta",), mocked.call_args.kwargs["skip_ad_platforms"])
         self.assertIs(cli.enrich_company, mocked.call_args.kwargs["company_enricher"])
         self.assertIs(cli.score_unified_account_run, mocked.call_args.kwargs["unified_scorer"])
+        self.assertIs(cli.resolve_channel_gaps, mocked.call_args.kwargs["gap_resolver"])
         self.assertEqual(Path("data/gtm_signal_engine.sqlite3"), mocked.call_args.kwargs["database_path"])
 
     def test_company_enrichment_arguments_reach_cache_layer(self):

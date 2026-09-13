@@ -27,7 +27,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 158-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 160-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -345,6 +345,21 @@ use another local file. Rejections and review history are retained across
 re-ingestion. Approvals bind to the exact run and page content hash reviewed.
 Export verifies the resulting profile against the saved Scrapling pages before
 writing `normalized/reviewed_gap_profile.json`.
+
+After discovery—or after reviewers approve/reject candidates—apply the complete
+gap-resolution loop with one provider-free command:
+
+```bash
+uv run gtm-signals resolve-channel-gaps data/runs/<run-id> \
+  --account-name <company>
+```
+
+This idempotently rediscovers and ingests content-syndication, retargeting, and
+programmatic candidates, exports only approvals bound to the exact run and page
+hash, and rebuilds channel plus unified account scores. Pending candidates yield
+`review_required`; no candidates yield `insufficient_evidence`, never a zero or
+an unused-channel claim. `run-account-v1` executes this resolution stage
+automatically after collection and creative scoring.
 
 Collect live Deepline/BuiltWith technology observations after a Scrapling run:
 

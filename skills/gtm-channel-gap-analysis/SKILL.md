@@ -252,6 +252,11 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   When normalizing over known signals, propagate each signal's internal evidence
   coverage into aggregate coverage and confidence instead of treating a partial
   signal as fully observed.
+- Make gap review application a provider-free, idempotent replay. Rediscover and
+  ingest deterministic candidates, export only approvals bound to the current
+  run and page hash, then rebuild every dependent channel and account score.
+  Use `review_required` only when candidates are pending or evidence conflicts;
+  an empty queue with unresolved gaps is `insufficient_evidence`.
 - Maintain a sanitized labeled benchmark for classifier precision. Report its
   sample size and limits; do not generalize fixture precision to the production
   population.
