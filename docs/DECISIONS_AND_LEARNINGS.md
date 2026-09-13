@@ -960,3 +960,25 @@ coverage rather than raw page count.
   fetched. All content-syndication, retargeting, and programmatic gaps remain
   null/`insufficient_evidence`. No paid provider calls were made.
 - Validation: `docs/validation/2026-09-13-targeted-gap-evidence-acquisition.md`.
+
+### 2026-09-13 — Targeted acquisition enters the account pipeline explicitly
+
+- Added a budgeted `targeted_gap_acquisition` stage to
+  `account_pipeline_v2`. It runs after ad normalization so attributable landing
+  pages are available to planning, and before the existing exact-run resolver.
+- The stage is opt-in: `--gap-evidence-pages 0` is the default. Target, page,
+  and depth budgets plus the retry decision are persisted in the run's
+  collection policy and checkpoint. Previously failed URLs are retried only
+  with `--retry-gap-evidence`.
+- Pipeline acquisition uses `gap_evidence_acquisition_v2` with deferred
+  resolution. The pipeline's normal resolution stage then rediscovers evidence
+  and rebuilds dependent scores exactly once.
+- Enabling the stage in a realistic fixture exposed a latent missing import for
+  `discover_gap_candidates`. Earlier tests did not create normalized pages and
+  therefore missed the failing branch. The import is fixed and the integration
+  fixture now exercises that path.
+- Cached DailyPay and ColdIQ replays completed with paid collectors replaced by
+  fail-fast sentinels, proving the integration made no paid request. Both
+  acquisition stages returned `no_targets`; gap resolution remained
+  `insufficient_evidence` rather than creating a zero score.
+- Validation: `docs/validation/2026-09-13-account-pipeline-gap-acquisition.md`.

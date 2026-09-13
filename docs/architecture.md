@@ -88,3 +88,10 @@ artifacts locally without making provider calls. Pending evidence is
 `run-account-v1` is the V1 orchestration boundary. It writes a checkpoint after
 each stage and never repurchases completed BuiltWith or completed/partial
 Adyntel work during resume.
+
+`account_pipeline_v2` optionally runs targeted gap acquisition after paid-ad
+normalization and before exact-run gap resolution. The stage is disabled unless
+the caller supplies a positive page budget. Its target, page, and depth limits
+and failed-target retry choice are persisted as collection policy. Acquisition
+defers resolution to the existing pipeline stage, so dependent scores are
+rebuilt exactly once.

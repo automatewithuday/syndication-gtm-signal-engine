@@ -11,17 +11,18 @@ from .adyntel_collection import collect_adyntel_ads
 from .apify_collection import collect_apify_ads
 from .external_collection import collect_deepline_technologies, replay_deepline_technologies
 from .paid_channel_scoring import score_paid_channel_run
-from .gap_discovery import discover_initiative_candidates
+from .gap_discovery import discover_gap_candidates, discover_initiative_candidates
 from .paid_gap import discover_paid_gap_candidates
 from .job_collection import collect_deepline_jobs
 from .review_queue import DEFAULT_DATABASE_PATH
 from .unified_scoring import score_unified_account_run
 from .gap_workflow import resolve_channel_gaps
+from .gap_acquisition import acquire_gap_evidence
 from .workflow import analyze_saved_run, crawl_and_analyze
 
 StageCallback = Callable[[str, str, dict[str, Any]], None]
 Collector = Callable[..., Any]
-PIPELINE_VERSION = "account_pipeline_v1"
+PIPELINE_VERSION = "account_pipeline_v2"
 
 
 def _now() -> str:
@@ -52,6 +53,11 @@ def run_account_v1(
     company_enricher: Collector | None = None,
     unified_scorer: Collector | None = score_unified_account_run,
     gap_resolver: Collector | None = resolve_channel_gaps,
+    gap_acquirer: Collector | None = acquire_gap_evidence,
+    gap_evidence_pages: int = 0,
+    gap_evidence_targets: int = 25,
+    gap_evidence_depth: int = 2,
+    retry_gap_evidence: bool = False,
     database_path: Path = DEFAULT_DATABASE_PATH,
     refresh_company: bool = False,
 ) -> dict[str, Any]:
@@ -59,6 +65,12 @@ def run_account_v1(
     invalid_skips = set(skip_ad_platforms).difference({"meta", "linkedin", "google"})
     if invalid_skips:
         raise ValueError("skip_ad_platforms must contain only meta, linkedin, or google")
+    if gap_evidence_pages < 0:
+        raise ValueError("gap_evidence_pages cannot be negative")
+    if gap_evidence_targets < 1:
+        raise ValueError("gap_evidence_targets must be at least 1")
+    if gap_evidence_depth < 1:
+        raise ValueError("gap_evidence_depth must be at least 1")
     skipped_platforms = tuple(dict.fromkeys(skip_ad_platforms))
     requested_platforms = tuple(
         platform for platform in ("meta", "linkedin", "google")
@@ -102,6 +114,7 @@ def run_account_v1(
         "domain": domain, "account_name": account_name or domain, "started_at": _now(),
         "finished_at": None, "status": "running", "stages": {}, "blockers": [],
     }
+    state["pipeline_version"] = PIPELINE_VERSION
     # Blockers describe the current evidence state, not an append-only error log.
     # Stage checkpoints retain the historical details across resumptions.
     state["blockers"] = []
@@ -109,6 +122,13 @@ def run_account_v1(
     state["collection_policy"] = {
         "skipped_ad_platforms": list(skipped_platforms),
         "skip_means": "not collected by user decision; not zero and not evidence of absence",
+        "targeted_gap_evidence": {
+            "enabled": gap_evidence_pages > 0,
+            "maximum_pages": gap_evidence_pages,
+            "maximum_targets": gap_evidence_targets,
+            "maximum_depth": gap_evidence_depth,
+            "retry_failed": retry_gap_evidence,
+        },
     }
 
     def checkpoint(stage: str, status: str, detail: dict[str, Any] | None = None) -> None:
@@ -292,6 +312,51 @@ def run_account_v1(
     else:
         state["blockers"].append("Paid scoring unavailable: normalized external profile is missing")
         checkpoint("paid_scoring", "partial", {"reason": "external profile missing"})
+
+    if gap_evidence_pages == 0:
+        checkpoint("targeted_gap_acquisition", "skipped", {
+            "reason": "disabled; set a positive gap evidence page budget to enable",
+        })
+    elif gap_acquirer is None:
+        checkpoint("targeted_gap_acquisition", "skipped", {
+            "reason": "no gap evidence acquirer supplied by this library caller",
+        })
+    elif not (
+        (run_dir / "normalized" / "pages.jsonl").is_file()
+        and (run_dir / "normalized" / "discovered_urls.jsonl").is_file()
+    ):
+        reason = "targeted gap acquisition requires saved pages and discovered URLs"
+        state["blockers"].append(reason)
+        checkpoint("targeted_gap_acquisition", "partial", {"reason": reason})
+    else:
+        acquisition = gap_acquirer(
+            run_dir, account_name=account_name, database_path=database_path,
+            maximum_targets=gap_evidence_targets,
+            maximum_pages=gap_evidence_pages,
+            maximum_depth=gap_evidence_depth,
+            delay_seconds=delay_seconds,
+            retry_failed=retry_gap_evidence,
+            resolve_after_collection=False,
+        )
+        acquisition_status = acquisition["status"]
+        if acquisition_status not in {"completed", "partial", "no_targets"}:
+            raise ValueError(
+                f"unsupported targeted gap acquisition status: {acquisition_status}"
+            )
+        checkpoint("targeted_gap_acquisition", (
+            "partial" if acquisition_status == "partial" else "completed"
+        ), {
+            "acquisition_status": acquisition_status,
+            "plan": acquisition["plan"],
+            "pages_fetched": len(
+                (acquisition.get("collection") or {}).get("pages_fetched", [])
+            ),
+            "errors": (acquisition.get("collection") or {}).get("errors", []),
+        })
+        if acquisition_status == "partial":
+            state["blockers"].append(
+                "Targeted gap evidence acquisition was partial; unavailable evidence remains unknown"
+            )
 
     if gap_resolver is not None and profile_path.is_file():
         resolution = gap_resolver(

@@ -15,7 +15,7 @@ from .providers import WebsiteFetcher
 from .review_queue import DEFAULT_DATABASE_PATH
 
 PLANNER_VERSION = "gap_target_planner_v1"
-ACQUISITION_VERSION = "gap_evidence_acquisition_v1"
+ACQUISITION_VERSION = "gap_evidence_acquisition_v2"
 CONTEXT_TERMS = (
     "syndicat", "content distribution", "retarget", "remarket", "programmatic",
     "display advertising", "demand generation", "paid media", "growth marketing",
@@ -272,6 +272,7 @@ def acquire_gap_evidence(
     search_result_paths: list[Path] | None = None,
     retry_failed: bool = False,
     fetcher: WebsiteFetcher | None = None,
+    resolve_after_collection: bool = True,
 ) -> dict[str, Any]:
     plan = build_gap_target_plan(
         run_dir, maximum_targets=maximum_targets,
@@ -287,13 +288,17 @@ def acquire_gap_evidence(
             include_urls=selected, target_plan_path=plan_path,
             fetcher=fetcher or ScraplingFetcher(),
         )
-    resolution = resolve_channel_gaps(
-        run_dir, account_name=account_name, database_path=database_path
+    resolution = (
+        resolve_channel_gaps(
+            run_dir, account_name=account_name, database_path=database_path
+        )
+        if resolve_after_collection else None
     )
     result = {
         "schema_version": "1.0", "acquisition_version": ACQUISITION_VERSION,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "run_id": plan["run_id"], "account_domain": plan["account_domain"],
+        "resolution_deferred": not resolve_after_collection,
         "status": (
             "no_targets" if not selected else
             "partial" if collection and collection.get("errors") else "completed"
@@ -304,7 +309,7 @@ def acquire_gap_evidence(
             "skipped_previously_attempted": plan["skipped_previously_attempted"],
         },
         "collection": collection,
-        "resolution": {
+        "resolution": None if resolution is None else {
             "status": resolution["status"],
             "review_counts": resolution["review_counts"],
             "channels": resolution["channels"],

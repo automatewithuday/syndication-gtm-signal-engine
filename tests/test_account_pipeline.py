@@ -29,6 +29,12 @@ class AccountPipelineTests(unittest.TestCase):
             _write(run_dir / "normalized" / "asset_summary.json", {
                 "substantial": {"yes": 0}, "asset_types": {},
             })
+            _write(run_dir / "normalized" / "pages.jsonl", {
+                "url": "https://example.com/", "text": "Home", "main_text": "Home",
+                "links": [], "content_hash": "a" * 64,
+                "observed_at": "2026-09-13T00:00:00Z",
+            })
+            (run_dir / "normalized" / "discovered_urls.jsonl").write_text("")
             _write(run_dir / "normalized" / "deepline_collection.json", {"status": "completed"})
             _write(run_dir / "normalized" / "adyntel_collection.json", {"platforms": {
                 key: {"status": "completed", "incomplete": False, "provider_total_records": 0}
@@ -75,18 +81,37 @@ class AccountPipelineTests(unittest.TestCase):
                     },
                 }
 
+            def acquire_gaps(saved, **kwargs):
+                calls.append((
+                    "gap_acquisition", kwargs["maximum_pages"],
+                    kwargs["maximum_targets"], kwargs["maximum_depth"],
+                    kwargs["retry_failed"], kwargs["resolve_after_collection"],
+                ))
+                return {
+                    "status": "no_targets",
+                    "plan": {
+                        "snapshot_id": "plan", "target_count": 0,
+                        "selected_count": 0, "skipped_previously_attempted": 0,
+                    },
+                    "collection": None,
+                }
+
             result = run_account_v1(
                 "example.com", account_name="Input Example", run_dir=run_dir,
                 company_enricher=company, jobs_collector=jobs,
                 unified_scorer=lambda *_args, **_kwargs: self.fail("fallback scorer ran"),
                 gap_resolver=resolve_gaps,
+                gap_acquirer=acquire_gaps, gap_evidence_pages=4,
+                gap_evidence_targets=9, gap_evidence_depth=3,
             )
             self.assertEqual([
                 ("company", "example.com"),
                 ("jobs", "123", "Canonical Example"),
+                ("gap_acquisition", 4, 9, 3, False, False),
                 ("gaps", str(run_dir)),
             ], calls)
             self.assertEqual("completed", result["pipeline"]["status"])
+            self.assertEqual("account_pipeline_v2", result["pipeline"]["version"])
             reference = json.loads(
                 (run_dir / "normalized" / "company_enrichment.json").read_text()
             )
@@ -96,6 +121,10 @@ class AccountPipelineTests(unittest.TestCase):
             )
             self.assertEqual(
                 "completed", result["pipeline"]["stages"]["channel_gap_resolution"]["status"]
+            )
+            self.assertEqual(
+                "no_targets",
+                result["pipeline"]["stages"]["targeted_gap_acquisition"]["acquisition_status"],
             )
             self.assertEqual(75, result["unified_account_score"]["priority"]["score"])
 
@@ -168,6 +197,10 @@ class AccountPipelineTests(unittest.TestCase):
                 skip_ad_platforms=("meta",), unified_scorer=None, gap_resolver=None,
             )
             self.assertEqual("completed", resumed["pipeline"]["status"])
+            self.assertEqual(
+                "skipped",
+                resumed["pipeline"]["stages"]["targeted_gap_acquisition"]["status"],
+            )
 
     def test_failed_adyntel_uses_apify_but_partial_does_not(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -200,6 +233,15 @@ class AccountPipelineTests(unittest.TestCase):
                 unified_scorer=None, gap_resolver=None,
             )
             self.assertEqual(["meta"], fallback)
+
+    def test_gap_acquisition_budget_validation(self):
+        for kwargs, message in (
+            ({"gap_evidence_pages": -1}, "cannot be negative"),
+            ({"gap_evidence_targets": 0}, "must be at least 1"),
+            ({"gap_evidence_depth": 0}, "must be at least 1"),
+        ):
+            with self.subTest(kwargs=kwargs), self.assertRaisesRegex(ValueError, message):
+                run_account_v1("example.com", **kwargs)
 
 
 if __name__ == "__main__":

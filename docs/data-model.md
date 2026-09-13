@@ -67,7 +67,8 @@ collection method. Processing timestamps are excluded from logical identity.
 
 Run-local acquisition outcome linking the exact plan snapshot to the targeted
 Scrapling collection and downstream gap-resolution summary. `no_targets` and
-`partial` are coverage states, not negative channel evidence.
+`partial` are coverage states, not negative channel evidence. Version 2 marks
+when resolution is deferred to the account pipeline's single resolver stage.
 
 ### `gap_candidates`
 

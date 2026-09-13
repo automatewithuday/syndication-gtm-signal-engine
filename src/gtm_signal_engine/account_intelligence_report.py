@@ -90,6 +90,9 @@ def build_account_intelligence_report(
     job_postings = _load_jsonl(run_dir / "normalized" / "job_postings.jsonl")
     company_enrichment = _load(run_dir / "normalized" / "company_enrichment.json")
     unified_score = _load(run_dir / "normalized" / "unified_account_score.json")
+    gap_acquisition = _load(
+        run_dir / "normalized" / "gap_evidence_acquisition.json"
+    )
     pipeline = _load(run_dir / "normalized" / "account_pipeline.json")
     domain = (urlsplit(str(manifest.get("seed_url", ""))).hostname or profile.get("domain") or "").removeprefix("www.")
 
@@ -202,6 +205,7 @@ def build_account_intelligence_report(
         },
         "company_enrichment": company_enrichment or None,
         "unified_account_score": unified_score or None,
+        "gap_evidence_acquisition": gap_acquisition or None,
         "paid_gap_candidates": gap_candidates or None,
         "top_creatives": top_creatives,
         "blockers": list(dict.fromkeys(blockers)),
@@ -252,6 +256,19 @@ def build_account_intelligence_report(
                 f"{detail.get('state', 'unknown')} | {float(detail.get('confidence') or 0):.0%} |"
             )
         lines.append("")
+    if gap_acquisition:
+        plan = gap_acquisition.get("plan", {})
+        collection = gap_acquisition.get("collection") or {}
+        lines.extend([
+            "## Targeted gap-evidence acquisition", "",
+            f"- Status: {gap_acquisition.get('status', 'unknown')}",
+            f"- Relevant targets: {plan.get('target_count', 0)}",
+            f"- Selected this pass: {plan.get('selected_count', 0)}",
+            f"- Pages fetched: {len(collection.get('pages_fetched', []))}",
+            f"- Held prior failures: {plan.get('skipped_previously_attempted', 0)}",
+            "- Unavailable or unselected targets are unknown, not evidence of channel absence.",
+            "",
+        ])
     lines.extend([
         "## Paid advertising", "",
         "| Channel | Adyntel | Total ads | Adyntel inspected | Fallback | Fallback inspected | Evidence state |", "|---|---:|---:|---:|---:|---:|---:|",

@@ -322,6 +322,13 @@ def build_parser() -> argparse.ArgumentParser:
     run_account.add_argument("--maximum-pages", type=int, default=100)
     run_account.add_argument("--maximum-sitemaps", type=int, default=20)
     run_account.add_argument("--delay-seconds", type=float, default=0.25)
+    run_account.add_argument(
+        "--gap-evidence-pages", type=int, default=0,
+        help="Opt in to a bounded Scrapling-only targeted gap-evidence stage",
+    )
+    run_account.add_argument("--gap-evidence-targets", type=int, default=25)
+    run_account.add_argument("--gap-evidence-depth", type=int, default=2)
+    run_account.add_argument("--retry-gap-evidence", action="store_true")
     run_account.add_argument("--linkedin-company-id")
     run_account.add_argument("--database", type=Path, default=DEFAULT_DATABASE_PATH)
     run_account.add_argument("--refresh-company", action="store_true")
@@ -693,6 +700,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             refresh_company=args.refresh_company,
             unified_scorer=score_unified_account_run,
             gap_resolver=resolve_channel_gaps,
+            gap_acquirer=acquire_gap_evidence,
+            gap_evidence_pages=args.gap_evidence_pages,
+            gap_evidence_targets=args.gap_evidence_targets,
+            gap_evidence_depth=args.gap_evidence_depth,
+            retry_gap_evidence=args.retry_gap_evidence,
         )
         print(json.dumps({
             "status": result["pipeline"]["status"], "run_dir": result["run"]["run_dir"],

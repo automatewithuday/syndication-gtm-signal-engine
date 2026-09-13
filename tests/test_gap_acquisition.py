@@ -178,6 +178,27 @@ class GapAcquisitionTests(unittest.TestCase):
             )
             self.assertTrue((run_dir / "normalized" / "gap_evidence_acquisition.json").is_file())
 
+    def test_pipeline_mode_defers_resolution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir = self._run(Path(directory))
+            with patch(
+                "gtm_signal_engine.gap_acquisition.resolve_channel_gaps"
+            ) as resolver:
+                result = acquire_gap_evidence(
+                    run_dir, maximum_targets=2, maximum_pages=2,
+                    resolve_after_collection=False,
+                    fetcher=FixtureFetcher({
+                        "https://example.com/robots.txt": b"User-agent: *\nAllow: /\n",
+                        "https://example.com/careers": b"<html><main>Careers</main></html>",
+                        "https://example.com/landing/new-offer": b"<html><main>Offer</main></html>",
+                    }),
+                    delay_seconds=0,
+                )
+
+            resolver.assert_not_called()
+            self.assertIsNone(result["resolution"])
+            self.assertTrue(result["resolution_deferred"])
+
 
 if __name__ == "__main__":
     unittest.main()

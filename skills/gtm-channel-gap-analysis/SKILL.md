@@ -164,6 +164,10 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
 - Treat a redirect to an unrelated path as a failed target, not as evidence for
   the requested URL. Persist successful and failed attempts, exclude both from
   automatic repeat collection, and require an explicit retry for failures.
+- In a full account pipeline, run optional targeted acquisition after ad
+  normalization and before exact-run gap resolution. Require an explicit page
+  budget, persist all caps and retry intent, and defer scoring to the pipeline's
+  single resolver stage so dependent scores are not rebuilt twice.
 - When an analyst supplies an exact high-value target, require it to exist in
   the saved discovery inventory and enqueue it before ordinary targets so the
   explicit priority cannot be lost to a previously queued copy.

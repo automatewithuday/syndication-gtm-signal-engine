@@ -172,6 +172,20 @@ fetched and two known redirecting URLs were skipped. ColdIQ had three relevant
 targets, all already fetched. Both runs therefore made zero new requests and
 kept all three channel gaps null/`insufficient_evidence`.
 
+## Phase 3.7 — Opt-in pipeline acquisition
+
+Complete for the local V1 scope. `account_pipeline_v2` exposes explicit target,
+page, and depth budgets for the Scrapling gap-acquisition stage. It executes
+after advertising evidence is normalized and before channel-gap resolution,
+records its policy and checkpoint, and defers scoring so the resolver runs only
+once. A zero page budget is the safe default.
+
+Cached end-to-end replays for DailyPay and ColdIQ replaced every paid provider
+collector with a fail-fast sentinel. Both completed with `no_targets`, zero new
+provider calls, and `insufficient_evidence` channel gaps. The integration test
+also exposed and fixed a missing `discover_gap_candidates` import that could
+crash a pipeline run once normalized pages were present.
+
 ## Phase 4 — Validation and learning
 
 Complete as validation infrastructure. Exact-run/content-hash review supports
@@ -209,7 +223,7 @@ with candidates but no attributable normalized ads is inconclusive rather than
 completed. Provider-cost reports now include Apify and flag paid attempts whose
 billing metadata was not returned inline.
 
-The complete deterministic suite passes 168 tests.
+The complete deterministic suite passes 170 tests.
 
 ## Current account-specific collection policy
 

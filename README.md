@@ -27,7 +27,7 @@ Version 1 is a complete local review release. It includes:
 - Versioned SQLite migrations, batch jobs, review queues, evidence snapshots,
   and outcome measurement
 - Qualification-gated evidence bundles that prevent unsupported outreach claims
-- A 168-test fixture-only suite covering classification, scoring, persistence, workflow, and
+- A 170-test fixture-only suite covering classification, scoring, persistence, workflow, and
   validation behavior
 
 The [DailyPay and ColdIQ review](reports/REAL_ACCOUNT_REVIEW.md) demonstrates the
@@ -115,6 +115,22 @@ completed or partial provider stages:
 uv run gtm-signals run-account-v1 example.com --account-name Example \
   --resume-run data/runs/<run-id>
 ```
+
+Opt in to targeted gap-evidence collection with an explicit Scrapling page
+budget. The stage runs after ad normalization, so attributable landing pages
+can enter the plan, and immediately before exact-run gap resolution:
+
+```bash
+uv run gtm-signals run-account-v1 example.com --account-name Example \
+  --resume-run data/runs/<run-id> \
+  --gap-evidence-pages 10 --gap-evidence-targets 25 --gap-evidence-depth 2
+```
+
+The default page budget is zero, so ordinary runs do not make additional
+website requests. Previously failed targets remain held unless
+`--retry-gap-evidence` is explicit. The selected budget and retry policy are
+persisted in `normalized/account_pipeline.json`, and acquisition coverage is
+included in the final JSON/Markdown report.
 
 Skip a deliberately out-of-scope ad channel without treating it as a zero:
 

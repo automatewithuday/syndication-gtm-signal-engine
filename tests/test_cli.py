@@ -171,11 +171,20 @@ class CliTests(unittest.TestCase):
         }
         with patch.object(cli, "run_account_v1", return_value=result) as mocked, \
              patch("builtins.print"):
-            cli.main(["run-account-v1", "coldiq.com", "--skip-ad-platform", "meta"])
+            cli.main([
+                "run-account-v1", "coldiq.com", "--skip-ad-platform", "meta",
+                "--gap-evidence-pages", "6", "--gap-evidence-targets", "12",
+                "--gap-evidence-depth", "3", "--retry-gap-evidence",
+            ])
         self.assertEqual(("meta",), mocked.call_args.kwargs["skip_ad_platforms"])
         self.assertIs(cli.enrich_company, mocked.call_args.kwargs["company_enricher"])
         self.assertIs(cli.score_unified_account_run, mocked.call_args.kwargs["unified_scorer"])
         self.assertIs(cli.resolve_channel_gaps, mocked.call_args.kwargs["gap_resolver"])
+        self.assertIs(cli.acquire_gap_evidence, mocked.call_args.kwargs["gap_acquirer"])
+        self.assertEqual(6, mocked.call_args.kwargs["gap_evidence_pages"])
+        self.assertEqual(12, mocked.call_args.kwargs["gap_evidence_targets"])
+        self.assertEqual(3, mocked.call_args.kwargs["gap_evidence_depth"])
+        self.assertTrue(mocked.call_args.kwargs["retry_gap_evidence"])
         self.assertEqual(Path("data/gtm_signal_engine.sqlite3"), mocked.call_args.kwargs["database_path"])
 
     def test_company_enrichment_arguments_reach_cache_layer(self):
