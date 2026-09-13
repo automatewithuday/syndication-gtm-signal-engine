@@ -27,6 +27,15 @@ Produce an auditable account assessment, not a claim of externally unknowable ab
   If Prospeo returns a LinkedIn URL without its numeric ID, use a free exact-domain
   identity resolver and persist the merged identifiers. Keep Crunchbase funding
   as a separate required source rather than treating Prospeo funding as final.
+- For a known domain, use cached company enrichment and never call Prospeo
+  company search merely to duplicate that record. Reserve Prospeo company-search
+  filters for account discovery or prequalification. Treat its hiring, funding,
+  technology, news, growth, and website fields as candidate-selection hints;
+  final scoring still requires the dedicated attributable evidence source.
+- Validate Prospeo search filters against the live contract and current enum or
+  suggestion values. Preserve `PLAN_REQUIRED` and `INVALID_FILTERS` as bounded
+  provider outcomes; do not silently broaden, guess enums, or automatically
+  repurchase a corrected query.
 - Turn real observations into sanitized deterministic fixtures; unit tests must
   not depend on live websites or paid provider calls.
 - Treat scoring weights and qualification thresholds as provisional until they

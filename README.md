@@ -95,6 +95,14 @@ provider envelopes live outside the core database and are referenced by their
 path and SHA-256 hash from append-only enrichment snapshots. The SQLite account
 row stores only the normalized company profile and field provenance.
 
+For an already-known domain, use `prospeo_enrich_company`; do not run a company
+search merely to recover the same firmographics. Prospeo's
+[company-search filters](https://prospeo.io/api-docs/filters-documentation) are
+reserved for a later account-discovery/prequalification stage. Their hiring,
+funding, technology, news, growth, and website filters may select which accounts
+enter the pipeline, but final scores still require the corresponding stored
+source evidence.
+
 After account enrichment, the workflow runs Scrapling website analysis, Deepline/BuiltWith, all three
 Deepline/Adyntel channels, local creative analysis, `paid_channels_v3`, and a
 JSON/Markdown decision report. Resume an existing run without repurchasing

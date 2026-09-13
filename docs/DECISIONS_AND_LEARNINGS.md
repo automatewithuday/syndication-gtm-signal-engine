@@ -849,3 +849,32 @@ coverage rather than raw page count.
   non-authoritative context only; the account remains partial because the user
   requires Crunchbase through Deepline for funding scoring and that callable
   contract is not currently exposed.
+
+### 2026-09-13 — Prospeo search filters are sourcing criteria, not duplicate enrichment
+
+- The official Prospeo filter documentation distinguishes `/search-company`
+  filters from per-company enrichment. A known domain continues through the
+  cached `prospeo_enrich_company` identity gate; calling company search for that
+  same account would add cost and a second, unnecessary source path.
+- A future account-discovery stage can use Prospeo filters for company identity,
+  location, headcount/range, industry, revenue, type, founding year, headcount
+  growth, technologies, active job titles/count, funding stage/date/amount and
+  investors, recent news, website traffic/structure, ICP, products/services,
+  integrations, and operating languages.
+- `company_funding`, `company_technology`, `company_job_posting_hiring_for`, and
+  `company_job_posting_quantity` require at least Prospeo Starter. Website
+  full-text/structure search, Google discovery, key-executive events, and
+  traffic filtering require Pro; some additional fields require Growth.
+  `PLAN_REQUIRED` and `INVALID_FILTERS` must be preserved as explicit provider
+  outcomes rather than silently broadening or retrying a query.
+- Search results are candidate-selection evidence only. Prospeo hiring filters
+  do not replace attributable LinkedIn Jobs, Google Jobs, or career-page rows;
+  Prospeo funding filters do not replace the required Crunchbase record; and
+  technology filters do not replace the stored BuiltWith observation.
+- Prospeo fixes results at 25 rows per page, caps page number at 1,000, limits
+  total filter values to 20,000, and rejects exclude-only searches. Filter enums
+  should be obtained from Prospeo's current enum/suggestion surfaces rather than
+  invented locally.
+- The page was retrieved successfully with the project's Scrapling adapter
+  after Parallel extraction reported insufficient credit. No alternate web
+  collector was used for the source review.
